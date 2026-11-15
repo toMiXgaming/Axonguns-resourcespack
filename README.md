@@ -333,6 +333,26 @@ Na 1.21–1.21.3 to samo jest w nakładce `axon_1_21_0` jako `overrides` (`legac
 
 ![Surowa Siarka](podglady/surowa-siarka.png)
 
+## Tablica wyników (AxonScoreboard)
+
+Panel tablicy po prawej stronie ekranu: ciemne tło z zaokrąglonymi rogami zamiast szarego prostokąta, nagłówek z logo AXONCORE, kolorowy pasek z lewej, cienkie linie oddzielające, jednokolorowe ikony 8×8 (profil, portfel, działka, rajd, wipe, PvP, Oaza…) i gładkie paski postępu (zdrowie, paliwo reaktora, wipe). Podgląd: `podglady/tablica-wynikow.png` (render czcionką vanilli 1.21.4 i geometrią tablicy z klienta, na danych z serwera testowego).
+
+Wszystko to znaki w czcionce `minecraft:default` (klient łączy `font/default.json` ze wszystkich paczek, więc vanilla zostaje bez zmian):
+
+| Znaki | Co to |
+|---|---|
+| U+EA00, U+EA01 | tło nagłówka i jego akcent (biały, barwiony kolorem tekstu) |
+| U+EA02 | logo AXONCORE (rysowane 3× gęściej, ostre przy każdej skali GUI) |
+| U+EA03, U+EA04 | kafel wiersza i stopki (255 px, wychodzi za prawą krawędź ekranu) |
+| U+EA05, U+EA06 | linia oddzielająca i pasek z lewej (barwione akcentem) |
+| U+EA10–U+EA1F | ikony, rysowane 4× gęściej |
+| U+EA40–U+EA54 | pasek postępu w 21 krokach (0–100%) |
+| U+EB00–U+EB08, U+EB10–U+EB18 | odstępy −1…−256 i +1…+256 px |
+
+Białe elementy przyjmują kolor tekstu, więc logo, akcent i linie mają kolor skina GUI gracza (Elita złoty). Szerokości znaków muszą się zgadzać z AxonScoreboard (`pack/PackGlyphs.java`); `axoncore/tablica.py` liczy je jak klient i przerywa budowanie, gdy coś się zmieni. AxonScoreboard pokazuje panel tylko graczom, którzy wczytali paczkę; reszta widzi zwykłą tablicę. Shaderów to nie rusza.
+
+Generator: `zrodla/axoncore/tablica.py` (woła go `gen_axoncore.pliki()`), łatka gotowych zipów: `python3 zrodla/dodaj_tablice.py`.
+
 ## Wgranie na serwer
 
 Repo musi być **publiczne**, inaczej gracze nie pobiorą paczki. W `plugins/QualityArmory/config.yml`:
