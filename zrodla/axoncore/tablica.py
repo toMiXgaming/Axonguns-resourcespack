@@ -36,7 +36,7 @@ HH = 16                          # wysokość nagłówka: od 7 px nad wierszem t
 GLYPHS = {
     0xEA00: ('naglowek', HH, HH - 2),
     0xEA01: ('naglowek_akcent', HH, HH - 2),
-    0xEA02: ('logo', 10, 9),
+    0xEA02: ('logo', 8, 7),
     0xEA03: ('wiersz', 9, 7),
     0xEA04: ('stopka', 12, 7),
     0xEA05: ('linia', 9, 7),
@@ -74,7 +74,7 @@ for k in range(9):
 
 # advance, które musi znać plugin (PackGlyphs.java)
 ADVANCE = {'naglowek': 256, 'naglowek_akcent': 256, 'wiersz': 256, 'stopka': 256, 'linia': 256,
-           'krawedz': 3, 'logo': 64, 'ikona': 9, 'pasek': 31, 'ozdoba': 256, 'wzor': 256}
+           'krawedz': 3, 'logo': 73, 'ikona': 9, 'pasek': 31, 'ozdoba': 256, 'wzor': 256}
 for _L in range(len(KRYCIE)):
     for _n in ('tlo_naglowek', 'tlo_wiersz', 'tlo_stopka'):
         ADVANCE['%s_%d' % (_n, _L)] = 256
@@ -130,6 +130,9 @@ def naglowek_akcent():
         px[x, 1] = (255, 255, 255, int(150 * fade))
         for y in range(2, 9):
             px[x, y] = (255, 255, 255, int(38 * fade * (1 - (y - 2) / 7)))
+    for y in range(HH):                      # pasek z lewej przez cały nagłówek, dalej idzie krawędź wierszy
+        px[0, y] = (255, 255, 255, 255)
+        px[1, y] = (255, 255, 255, max(px[1, y][3], 90))
     _rounded_left(img, 4, 0)
     return img
 
@@ -216,12 +219,12 @@ def ozdoba():
             px[x + 1, 3] = (255, 255, 255, al // 3)
             px[x, 2] = (255, 255, 255, al // 3)
             px[x, 4] = (255, 255, 255, al // 3)
-    # linia nad wierszami z małym rombem na początku
-    y = HH - 3
+    # linia nad wierszami z małym rombem na początku: na dolnej krawędzi nagłówka, pod napisem
+    y = HH - 1
     for x in range(10, WIDE):
         t = (x - 10) / 170
         px[x, y] = (255, 255, 255, max(0, int(150 * (1 - t))) if t < 1 else 0)
-    for dx, dy in ((0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)):
+    for dx, dy in ((0, -1), (-1, 0), (0, 0), (1, 0)):
         px[6 + dx, y + dy] = (255, 255, 255, 230)
     px[WIDE - 1, 0] = (255, 255, 255, 1)       # stały advance 256
     return img
@@ -250,33 +253,42 @@ def _font(size):
     return ImageFont.load_default()
 
 
+# Litery AXONCORE z czcionki vanilli (ascii.png 1.21.4), żeby logo miało ten sam krój co napis trybu
+# obok niego (np. RAJD) i resztę tablicy.
+_LITERY = {
+    'A': ['.###.', '#...#', '#####', '#...#', '#...#', '#...#', '#...#'],
+    'X': ['#...#', '.#.#.', '..#..', '.#.#.', '#...#', '#...#', '#...#'],
+    'O': ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+    'N': ['#...#', '##..#', '#.#.#', '#..##', '#...#', '#...#', '#...#'],
+    'C': ['.###.', '#...#', '#....', '#....', '#....', '#...#', '.###.'],
+    'R': ['####.', '#...#', '####.', '#...#', '#...#', '#...#', '#...#'],
+    'E': ['#####', '#....', '###..', '#....', '#....', '#....', '#####'],
+}
+
+
 def logo():
-    """AXONCORE: litery z odstępami, biało-szary gradient z góry na dół, romb przed napisem."""
-    S = 3   # logo: 3× zamiast 4×, żeby zmieściło się w 256 px
-    H = 10 * S
-    text = 'AXONCORE'
-    f = _font(int(H * 0.74))
-    spacing = int(S * 1.6)
-    widths = [f.getlength(ch) for ch in text]
-    total = int(sum(widths) + spacing * (len(text) - 1)) + 9 * S
-    img = Image.new('L', (total + S, H))
-    d = ImageDraw.Draw(img)
-    # romb
-    cx, cy, r = 3.2 * S, H / 2, 3.0 * S
-    d.polygon([(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)], fill=255)
-    x = 8.5 * S
-    top = (H - f.getbbox('A')[3] - f.getbbox('A')[1]) / 2
-    for ch, w in zip(text, widths):
-        d.text((x, top - f.getbbox('A')[1] / 2), ch, font=f, fill=255)
-        x += w + spacing
-    out = Image.new('RGBA', img.size)
-    po, pi = out.load(), img.load()
-    for y in range(img.height):
-        shade = int(255 - 70 * (y / img.height) ** 1.5)
-        for xx in range(img.width):
-            if pi[xx, y]:
-                po[xx, y] = (shade, shade, shade, pi[xx, y])
-    return _trim_right(out)
+    """AXONCORE pogrubioną czcionką vanilli (jak &l), litery co 8 px, romb przed napisem.
+    Wysokość 8 i ascent 7 jak zwykły tekst, więc logo i napis trybu stoją na jednej linii."""
+    img = Image.new('RGBA', (80, 8))
+    px = img.load()
+
+    def put(x, y):
+        shade = int(255 - 9 * y)                 # lekko ciemniej w dół
+        px[x, y] = (shade, shade, shade, 255)
+
+    for y in range(7):                           # romb 7×7
+        r = 3 - abs(3 - y)
+        for x in range(3 - r, 4 + r):
+            put(x, y)
+    x0 = 10
+    for ch in 'AXONCORE':
+        for y, row in enumerate(_LITERY[ch]):
+            for x, c in enumerate(row):
+                if c == '#':
+                    put(x0 + x, y)
+                    put(x0 + x + 1, y)           # pogrubienie: drugi raz o piksel w prawo
+        x0 += 8
+    return _trim_right(img)
 
 
 def _trim_right(img):
