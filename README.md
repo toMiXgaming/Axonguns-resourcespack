@@ -353,6 +353,11 @@ Białe elementy przyjmują kolor tekstu, więc logo, akcent i linie mają kolor 
 
 Generator: `zrodla/axoncore/tablica.py` (woła go `gen_axoncore.pliki()`), łatka gotowych zipów: `python3 zrodla/dodaj_tablice.py`.
 
+Mała czcionka `axon:maly` (`assets/axon/font/maly.json`, AxonScoreboard → Wygląd → Czcionka): tekstury vanilli
+(ascii, accented, nonlatin_european) z wysokością 3/4, reszta znaków przez `reference` do `minecraft:default`.
+Listy znaków: `zrodla/axoncore/maly_znaki.json` (kopia z 1.21.4). Tło do barwienia ma 5 poziomów krycia
+(242, 188, 128, 72, 32): U+EA60–U+EA68 i U+EA70–U+EA75.
+
 Od AxonScoreboard 1.3 panel ma też tło do barwienia skinem (U+EA60–U+EA68: nagłówek, wiersz i stopka
 w trzech poziomach przezroczystości), ozdobę nagłówka (U+EA69) i wzór wierszy (U+EA6A) dla skinów VIP i Elity.
 
