@@ -47,13 +47,19 @@ IKONY = ['profil', 'kasa', 'staty', 'aktywnosc', 'dzialka', 'serwer', 'swiat', '
 for i, n in enumerate(IKONY):
     GLYPHS[0xEA10 + i] = ('ikona_' + n, 8, 7)
 # Panel do barwienia (skiny): białe/szare tło, kolor daje kod koloru tekstu (&#RRGGBB),
-# w trzech poziomach krycia (0 = pełne, 1 = średnie, 2 = lekkie). Plus ozdoba nagłówka i wzór wierszy
-# dla lepszych skinów.
-KRYCIE = (242, 188, 128)
-for L in range(3):
-    GLYPHS[0xEA60 + 3 * L] = ('tlo_naglowek_%d' % L, HH, HH - 2)
-    GLYPHS[0xEA61 + 3 * L] = ('tlo_wiersz_%d' % L, 9, 7)
-    GLYPHS[0xEA62 + 3 * L] = ('tlo_stopka_%d' % L, 12, 7)
+# w pięciu poziomach krycia (0 = pełne … 4 = prawie przezroczyste). Plus ozdoba nagłówka i wzór wierszy
+# dla lepszych skinów. Poziomy 0–2: U+EA60–U+EA68, 3–4: U+EA70–U+EA75 (U+EA69/EA6A to ozdoba i wzór).
+KRYCIE = (242, 188, 128, 72, 32)
+
+
+def _tlo_base(L):
+    return 0xEA60 + 3 * L if L < 3 else 0xEA70 + 3 * (L - 3)
+
+
+for L in range(len(KRYCIE)):
+    GLYPHS[_tlo_base(L)] = ('tlo_naglowek_%d' % L, HH, HH - 2)
+    GLYPHS[_tlo_base(L) + 1] = ('tlo_wiersz_%d' % L, 9, 7)
+    GLYPHS[_tlo_base(L) + 2] = ('tlo_stopka_%d' % L, 12, 7)
 GLYPHS[0xEA69] = ('ozdoba', HH, HH - 2)
 GLYPHS[0xEA6A] = ('wzor', 9, 7)
 PASKI = 21                       # 0%, 5%, ..., 100%
@@ -69,7 +75,7 @@ for k in range(9):
 # advance, które musi znać plugin (PackGlyphs.java)
 ADVANCE = {'naglowek': 256, 'naglowek_akcent': 256, 'wiersz': 256, 'stopka': 256, 'linia': 256,
            'krawedz': 3, 'logo': 64, 'ikona': 9, 'pasek': 31, 'ozdoba': 256, 'wzor': 256}
-for _L in range(3):
+for _L in range(len(KRYCIE)):
     for _n in ('tlo_naglowek', 'tlo_wiersz', 'tlo_stopka'):
         ADVANCE['%s_%d' % (_n, _L)] = 256
 
@@ -400,7 +406,7 @@ def pasek(i):
 def obrazy():
     out = {'naglowek': naglowek(), 'naglowek_akcent': naglowek_akcent(), 'logo': logo(),
            'wiersz': wiersz(), 'stopka': wiersz(True), 'linia': linia(), 'krawedz': krawedz()}
-    for L in range(3):
+    for L in range(len(KRYCIE)):
         out['tlo_naglowek_%d' % L] = tlo_naglowek(L)
         out['tlo_wiersz_%d' % L] = tlo_wiersz(L)
         out['tlo_stopka_%d' % L] = tlo_wiersz(L, True)
@@ -454,7 +460,31 @@ def pliki():
                           'ascent': ascent, 'chars': [chr(cp)]})
     files['assets/minecraft/font/default.json'] = json.dumps({'providers': providers}, ensure_ascii=True,
                                                              indent=1).encode()
+    files['assets/axon/font/maly.json'] = json.dumps(maly(), ensure_ascii=True, indent=1).encode()
     return files
+
+
+# Mała czcionka axon:maly (AxonScoreboard → Wygląd → Czcionka): te same tekstury co vanilla
+# (minecraft:font/ascii.png, accented.png, nonlatin_european.png), tylko wysokość 3/4, więc klient
+# zmniejsza glify i ich szerokość: (int) (0.5 + szerokość × 0.75) + 1. Reszta znaków (ikony, paski,
+# odstępy, unifont) przychodzi z minecraft:default w normalnym rozmiarze. Listy znaków to kopia
+# assets/minecraft/font/include/default.json z 1.21.4 (maly_znaki.json obok).
+MALY = {  # plik: (wysokość, ascent); vanilla: 8/7, accented 12/10
+    'minecraft:font/nonlatin_european.png': (6, 6),
+    'minecraft:font/accented.png': (9, 8),
+    'minecraft:font/ascii.png': (6, 6),
+}
+
+
+def maly():
+    import os
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'maly_znaki.json'), encoding='utf-8') as f:
+        znaki = json.load(f)
+    providers = [{'type': 'space', 'advances': {' ': 3, '\u200c': 0}}]
+    for plik, (h, a) in MALY.items():
+        providers.append({'type': 'bitmap', 'file': plik, 'height': h, 'ascent': a, 'chars': znaki[plik]})
+    providers.append({'type': 'reference', 'id': 'minecraft:default'})
+    return {'providers': providers}
 
 
 if __name__ == '__main__':
