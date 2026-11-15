@@ -49,6 +49,8 @@ def patch(path):
         if n not in files:
             continue
         d = json.loads(files[n])
+        if 'elements' not in d:     # model tylko z „parent” (bez własnych elementów): nie ma czego zdejmować
+            continue
         d['elements'] = [e for e in d['elements'] if e.get('name') != NAME]
         new = json.dumps(d, indent=2).encode()
         if new != files[n]:
