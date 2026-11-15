@@ -46,7 +46,7 @@ flat out vec4 axonSpriteA[AXON_SPRITES];
 flat out vec4 axonSpriteB[AXON_SPRITES];
 flat out vec2 axonSpriteLim[AXON_SPRITES];
 flat out float axonClock;
-// Panel HUD AxonScoreboard: 0 = nie, 1 = tekst, 2 = tło, 3 = linia oddzielająca.
+// Panel HUD AxonScoreboard: 0 = nie, inaczej rodzaj elementu + 1 (opis przy axonHudVertex).
 flat out int axonHud;
 out vec2 axonHudLocal;
 flat out vec4 axonHudBox;
@@ -54,6 +54,7 @@ flat out vec3 axonHudBg;
 flat out vec3 axonHudHead;
 flat out vec3 axonHudAcc;
 flat out vec4 axonHudAcc2;
+flat out vec4 axonHudExtra;
 
 // AxonMap: ekran mapy na cały ekran. Musi się zgadzać z pluginem (OverlayLayout).
 #define AXON_COLS 5
@@ -220,25 +221,56 @@ bool axonIsXpText() {
 
 // ---------------------------------------------------------------- panel HUD (AxonScoreboard)
 // Plugin wysyła panel jako napis bossbara o szerokości 0: zaczyna się na środku ekranu, y = 3.
-// Znaki panelu mają kolor z R w 64–111 (bity 0–1: róg, 2–3: skala; R / 16: 4 tekst, 5 tło, 6 linia).
-// Cienie (kolor / 4) chowamy. Prawdziwy kolor tekstu: G i B jako RGB 5-6-5.
-// Musi się zgadzać z AxonScoreboard (hud/HudLayout) i paczką (axoncore/hud.py).
+// Panel HUD AxonScoreboard (cała tablica to napis jednego bossbara, szerokość 0, start: środek ekranu, y = 3).
+// Rodzaj elementu w R / 16 (R 64–191), młodsze 4 bity R to ustawienia (panel: bity 0–1 róg, 2–3 skala;
+// baner: bity 0–1 skala). G i B to dane elementu:
+//   4 tekst panelu      G = r4 g4, B = b4 suma kontrolna (kolor RGB 4-4-4)
+//   5 tło panelu        G = W/2, B = liczba linii | krycie << 4 | alarm << 7
+//   6 linia oddzielająca G = W/2, B = numer linii
+//   7 pasek             G = wypełnienie 0–255, B = numer linii | kolor << 4 (paleta vanilli, 0 = akcent)
+//   8 powiadomienie     G = W/2, B = numer linii | kolor << 5
+//   9 tekst banera      jak tekst panelu
+//  10 tło banera        G = W/2, B = tick startu & 255
+//  11 czas powiadomienia G = tick startu & 255, B = numer linii | długość << 5
+// Wszystko poza tekstem to znak kafla skinu (alfa 253 w tle), tekst ma sumę kontrolną, więc zwykłe
+// napisy (tytuły okien itd.) nie są ruszane. Musi się zgadzać z AxonScoreboard (pack/HudPanel) i paczką (axoncore/hud.py).
 #define AXON_HUD_MARGIN 4.0
+#define AXON_MARKER 1024.0   // znaczniki (kafel skinu) mają 1024 × 1024 px GUI, żeby 1.21.6+ rysował tekst nad nimi
+#define AXON_LAYER_DY 19.0
 const float AXON_HUD_SCALES[4] = float[4](0.75, 1.0, 1.25, 1.5);
+const float AXON_BANNER_SCALES[4] = float[4](1.5, 2.0, 2.5, 3.0);
+const float AXON_TOAST_TICKS[8] = float[8](40.0, 60.0, 80.0, 100.0, 120.0, 160.0, 200.0, 240.0);
+
+float axonHudSnap(float scale, float gs) {
+    // skala do pełnych pikseli ekranu, żeby piksele czcionki były równe
+    return max(1.0, floor(scale * gs + 0.5)) / gs;
+}
 
 vec2 axonHudPlace(int settings, vec2 local, vec2 guiSize) {
     int corner = settings & 3;
     float gs = ScreenSize.x / guiSize.x;
-    // skala do pełnych pikseli ekranu, żeby piksele czcionki były równe
-    float s = max(1.0, floor(AXON_HUD_SCALES[(settings >> 2) & 3] * gs + 0.5)) / gs;
+    float s = axonHudSnap(AXON_HUD_SCALES[(settings >> 2) & 3], gs);
     float top = corner < 2 ? AXON_HUD_MARGIN : floor(guiSize.y * 0.25);
     float x = (corner & 1) == 1 ? guiSize.x - AXON_HUD_MARGIN : AXON_HUD_MARGIN;
     return vec2(x, top) + local * s;
 }
 
+vec2 axonBannerPlace(int settings, vec2 local, vec2 guiSize) {
+    float gs = ScreenSize.x / guiSize.x;
+    float s = axonHudSnap(AXON_BANNER_SCALES[settings & 3], gs);
+    return vec2(floor(guiSize.x * 0.5), floor(guiSize.y * 0.36)) + (local - vec2(0.0, 9.0)) * s;
+}
+
 int axonHudCheck(int r4, int g4, int b4, int settings) {
     return (r4 + 3 * g4 + 5 * b4 + 7 * settings + 9) & 15;
 }
+
+const vec3 AXON_LEGACY[16] = vec3[16](vec3(0.0), vec3(0.0, 0.0, 0.667), vec3(0.0, 0.667, 0.0), vec3(0.0, 0.667, 0.667),
+        vec3(0.667, 0.0, 0.0), vec3(0.667, 0.0, 0.667), vec3(1.0, 0.667, 0.0), vec3(0.667),
+        vec3(0.333), vec3(0.333, 0.333, 1.0), vec3(0.333, 1.0, 0.333), vec3(0.333, 1.0, 1.0),
+        vec3(1.0, 0.333, 0.333), vec3(1.0, 0.333, 1.0), vec3(1.0, 1.0, 0.333), vec3(1.0));
+const vec3 AXON_TOAST_COLORS[8] = vec3[8](vec3(0.0), vec3(1.0, 0.3, 0.3), vec3(0.24, 0.86, 0.52), vec3(1.0, 0.78, 0.25),
+        vec3(0.22, 0.78, 0.88), vec3(0.69, 0.45, 1.0), vec3(1.0, 0.48, 0.12), vec3(1.0));
 
 bool axonHudSkin(int corner) {
     // kafel skinu 2×2: wierzchołek zna swój róg, więc wylicza lewy górny teksel
@@ -253,57 +285,108 @@ bool axonHudSkin(int corner) {
     return abs(texelFetch(Sampler0, tl, 0).a * 255.0 - 253.0) < 0.5;
 }
 
+// Ticki od startu (tick & 255), z zegara gry klienta (serwer synchronizuje go co sekundę).
+float axonHudAge(int start) {
+    float now = GameTime * 24000.0;
+    return mod(now - float(start), 256.0);
+}
+
 bool axonHudVertex() {
     if (ProjMat[2][3] != 0.0) {
         return false;
     }
     vec2 guiSize = axonGuiSize(ProjMat);
     vec2 local = Position.xy - vec2(floor(guiSize.x * 0.5), 3.0);
-    if (abs(local.x) > 400.0 || local.y < -8.0 || local.y > 220.0) {
-        return false;
-    }
     ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
-    if (c.r < 64 || c.r >= 112) {
+    if (c.r < 64 || c.r >= 192) {
         return false;
     }
     int settings = c.r & 15;
     int kind = (c.r - 64) / 16;
-    bool right = (settings & 1) == 1;
+    bool banner = kind == 5 || kind == 6;
+    bool right = (settings & 1) == 1 && !banner;
     vec2 at = local;
-    float z = Position.z;
-    if (kind == 0) {
+    float z = Position.z + 3.0;   // 1.21.6+: z = 0 leży na dalekiej płaszczyźnie GUI, więc tylko w górę
+    if (kind == 0 || kind == 5) {
+        // tekst jedzie w drugim bossbarze (tło w pierwszym, żeby 1.21.6+ rysował tekst nad nim), 19 px niżej
+        local.y -= AXON_LAYER_DY;
+        at = local;
+        if (abs(local.x) > 520.0 || local.y < -8.0 || local.y > 330.0) {
+            return false;
+        }
         // G = r4 g4, B = b4 suma; suma kontrolna chroni zwykłe napisy (np. tytuły okien) o podobnym R
         int r4 = c.g >> 4, g4 = c.g & 15, b4 = c.b >> 4;
         if ((c.b & 15) != axonHudCheck(r4, g4, b4, settings)) {
             return false;
         }
         vertexColor = vec4(vec3(float(r4), float(g4), float(b4)) / 15.0, Color.a);
+        axonHud = kind == 0 ? 1 : 9;
+        if (banner) {
+            z += 50.0;                      // baner nad panelem
+        }
     } else {
         int corner = gl_VertexID % 4;   // znaki: lewy górny, lewy dolny, prawy dolny, prawy górny
         vec2 cc = vec2(corner == 2 || corner == 3 ? 1.0 : 0.0, corner == 1 || corner == 2 ? 1.0 : 0.0);
-        float w = float(c.g * 2);
-        float left = right ? -w : 0.0;
-        if (!axonHudSkin(corner)) {
+        // znacznik stoi w wierszu bossbara; ten sam napis w czacie (np. odpowiedź komendy) zostaje, gdzie był
+        if (abs(local.y - cc.y * AXON_MARKER) > 40.0 || !axonHudSkin(corner)) {
             return false;
         }
+        float w = float(c.g * 2);
+        float left = right ? -w : 0.0;
+        vec2 p;
         if (kind == 1) {
             float h = 21.0 + 9.0 * float(c.b & 15);
-            vec2 p = vec2(-6.0) + cc * vec2(w + 12.0, h + 12.0);   // 6 px na cień
+            p = vec2(-8.0) + cc * vec2(w + 16.0, h + 16.0);   // 8 px na cień i poświatę alarmu
             at = vec2(left, 0.0) + p;
-            axonHudLocal = p;
-            axonHudBox = vec4(w, h, float(c.b >> 4), 0.0);
-            // 1.21.6+: GUI bez głębi, kolejność rysowania robi swoje
-        } else {
+            axonHudBox = vec4(w, h, float((c.b >> 4) & 7), float(c.b >> 7));
+            z -= 2.0;                       // pod tekstem
+        } else if (kind == 2) {
             float y = 18.0 + 9.0 * float(c.b & 15) + 3.0;
-            vec2 p = cc * vec2(w - 12.0, 1.0);
+            p = cc * vec2(w - 12.0, 1.0);
             at = vec2(left + 6.0, y) + p;
-            axonHudLocal = p;
             axonHudBox = vec4(w - 12.0, 1.0, 0.0, 0.0);
-
+            z -= 1.0;
+        } else if (kind == 3) {
+            // pasek: znak stoi tam, gdzie zaczyna się pasek; 30 × 6 px w linii z B
+            float x0 = local.x - cc.x * AXON_MARKER;
+            float y = 18.0 + 9.0 * float(c.b & 15) + 1.0;
+            p = vec2(-2.0) + cc * vec2(34.0, 10.0);
+            at = vec2(x0, y) + p;
+            int pal = c.b >> 4;
+            axonHudExtra = vec4(pal == 0 ? axonHudAcc : AXON_LEGACY[pal], float(c.g) / 255.0);
+            axonHudBox = vec4(30.0, 6.0, 0.0, 0.0);
+            z -= 1.0;
+        } else if (kind == 4) {
+            float y = 18.0 + 9.0 * float(c.b & 31) - 4.0;
+            p = vec2(-6.0) + cc * vec2(w + 12.0, 28.0);
+            at = vec2(local.x - cc.x * AXON_MARKER, y) + p;   // znak stoi na lewej krawędzi (wysuwanie robi serwer)
+            int pal = c.b >> 5;
+            axonHudExtra = vec4(pal == 0 ? axonHudAcc : AXON_TOAST_COLORS[pal], 0.0);
+            axonHudBox = vec4(w, 16.0, 0.0, 0.0);
+            z -= 2.0;
+        } else if (kind == 6) {
+            float age = axonHudAge(c.b);
+            p = vec2(-w * 0.5 - 40.0, -14.0) + cc * vec2(w + 80.0, 46.0);
+            at = p;
+            axonHudBox = vec4(w, 18.0, age, 0.0);
+            z -= 3.0;                       // pod tłem panelu: panel i jego tekst przykrywają pas banera
+        } else if (kind == 7) {
+            float y = 18.0 + 9.0 * float(c.b & 31) - 4.0;
+            float age = axonHudAge(c.g);
+            float total = AXON_TOAST_TICKS[c.b >> 5];
+            p = cc * vec2(3.0, 16.0);
+            at = vec2(local.x - cc.x * AXON_MARKER, y) + p;   // pionowy pasek czasu przy lewej krawędzi powiadomienia
+            axonHudExtra = vec4(axonHudAcc, clamp(1.0 - age / total, 0.0, 1.0));
+            axonHudBox = vec4(3.0, 16.0, age, 0.0);
+            z -= 1.0;
+        } else {
+            return false;
         }
+        axonHudLocal = p;
+        axonHud = kind + 1;
     }
-    axonHud = kind + 1;
-    gl_Position = ProjMat * ModelViewMat * vec4(axonHudPlace(settings, at, guiSize), z, 1.0);
+    vec2 pos = banner ? axonBannerPlace(settings, at, guiSize) : axonHudPlace(settings, at, guiSize);
+    gl_Position = ProjMat * ModelViewMat * vec4(pos, z, 1.0);
     return true;
 }
 
@@ -316,6 +399,7 @@ void main() {
     axonHudHead = vec3(0.0);
     axonHudAcc = vec3(0.0);
     axonHudAcc2 = vec4(0.0);
+    axonHudExtra = vec4(0.0);
 
     sphericalVertexDistance = fog_spherical_distance(Position);
     cylindricalVertexDistance = fog_cylindrical_distance(Position);

@@ -33,8 +33,9 @@ SKINY = [
     ('zorza', '0A1020', '14234A', '3DF5C8', 'B072FF', True),
 ]
 SKIN_CHAR = 0xE100
+MARKER = 1024           # wysokość (i szerokość) znacznika w px GUI; advance = MARKER + 1
 
-LINES = 15
+LINES = 24          # 15 linii panelu + powiadomienia pod nim
 TITLE_TOP = 5          # górny brzeg tekstu tytułu w panelu (px GUI)
 FIRST_LINE_TOP = 18    # górny brzeg pierwszej linii
 LINE_H = 9
@@ -105,44 +106,93 @@ def skin_png(skin):
     return img
 
 
-def _shift(delta):
-    """Czcionka, w której wszystko jest niżej o delta px GUI."""
-    providers = [{'type': 'space', 'advances': dict(tablica.SPACES, **{' ': 4, '‌': 0})}]
+# Jedna czcionka axon:hud na cały panel: linia (tytuł = 0, linia k = k + 1) jest zapisana w numerze znaku,
+# U+F0000 + linia × 0x1000 + indeks znaku w ZNAKI. Jedna czcionka = jedna tekstura atlasu, więc klient 1.21.6+
+# (który sortuje elementy GUI po teksturze) rysuje znaki w kolejności z napisu: tło panelu pod tekstem.
+HUD_BASE = 0xF0000
+HUD_STRIDE = 0x1000
+
+
+def _znaki():
+    """Kolejność znaków (indeksy w czcionce HUD); musi się zgadzać z AxonScoreboard (hud_znaki.txt)."""
+    out = []
     for cp, (name, height, ascent) in sorted(tablica.GLYPHS.items()):
-        if name.startswith(('ikona_', 'pasek_')) or name == 'logo':
+        if name.startswith('ikona_') or name == 'logo':
+            out.append(cp)
+    out.extend(sorted(UNIFONT))
+    seen = set(out)
+    for plik in VANILLA_ASCENT:
+        for row in VANILLA[plik]:
+            for ch in row:
+                if ch != '\u0000' and ord(ch) not in seen:
+                    seen.add(ord(ch))
+                    out.append(ord(ch))
+    assert len(out) < HUD_STRIDE
+    return out
+
+
+ZNAKI = _znaki()
+INDEX = {cp: i for i, cp in enumerate(ZNAKI)}
+
+
+def hud_cp(slot, cp):
+    return HUD_BASE + slot * HUD_STRIDE + INDEX[cp]
+
+
+def _slot(slot, delta):
+    """Dostawcy znaków jednej linii: wszystko niżej o delta px GUI, pod własnymi numerami znaków."""
+    providers = []
+    for cp, (name, height, ascent) in sorted(tablica.GLYPHS.items()):
+        if name.startswith('ikona_') or name == 'logo':
             providers.append({'type': 'bitmap', 'file': tablica.FONT_REF + name + '.png', 'height': height,
-                              'ascent': ascent - delta, 'chars': [chr(cp)]})
+                              'ascent': ascent - delta, 'chars': [chr(hud_cp(slot, cp))]})
     for cp in sorted(UNIFONT):
         providers.append({'type': 'bitmap', 'file': FONT_REF + 'u%04x.png' % cp, 'height': 8, 'ascent': 7 - delta,
-                          'chars': [chr(cp)]})
+                          'chars': [chr(hud_cp(slot, cp))]})
+    taken = set()
     for plik, (height, ascent) in VANILLA_ASCENT.items():
-        providers.append({'type': 'bitmap', 'file': plik, 'height': height, 'ascent': ascent - delta,
-                          'chars': VANILLA[plik]})
+        rows = []
+        for row in VANILLA[plik]:
+            r = ''
+            for ch in row:
+                if ch == '\u0000' or ord(ch) in taken or ord(ch) in UNIFONT:
+                    r += '\u0000'
+                else:
+                    r += chr(hud_cp(slot, ord(ch)))
+            rows.append(r)
+        taken.update(ord(ch) for row in VANILLA[plik] for ch in row if ch != '\u0000')
+        providers.append({'type': 'bitmap', 'file': plik, 'height': height, 'ascent': ascent - delta, 'chars': rows})
     return providers
 
 
 def pliki():
     files = {}
-    title = _shift(TITLE_TOP)
+    providers = [{'type': 'space', 'advances': dict(tablica.SPACES, **{' ': 4, '\u200c': 0})}]
     for i, skin in enumerate(SKINY):
         name = 'skin_%s.png' % skin[0]
-        img = skin_png(skin)
         buf = io.BytesIO()
-        img.save(buf, 'PNG')
+        skin_png(skin).save(buf, 'PNG')
         files[FONT_DIR + name] = buf.getvalue()
-        title.append({'type': 'bitmap', 'file': FONT_REF + name, 'height': 2, 'ascent': 0,
-                      'chars': [chr(SKIN_CHAR + i)]})
+        # Znacznik ma 1024 × 1024 px GUI (kafel 2×2 w skali 512): klient 1.21.6+ sortuje elementy GUI po teksturze,
+        # ale znaki, które nachodzą na wcześniejsze, rysuje nad nimi. Tak tekst zawsze trafia nad tło panelu.
+        providers.append({'type': 'bitmap', 'file': FONT_REF + name, 'height': MARKER, 'ascent': 7,
+                          'chars': [chr(SKIN_CHAR + i)]})
     for cp in UNIFONT:
         buf = io.BytesIO()
         unifont_png(cp).save(buf, 'PNG')
         files[FONT_DIR + 'u%04x.png' % cp] = buf.getvalue()
-    files['assets/axon/font/hud_t.json'] = json.dumps({'providers': title}, ensure_ascii=True).encode()
+    providers += _slot(0, TITLE_TOP)
     for k in range(LINES):
-        files['assets/axon/font/hud_%d.json' % k] = json.dumps(
-            {'providers': _shift(FIRST_LINE_TOP + LINE_H * k)}, ensure_ascii=True).encode()
+        providers += _slot(k + 1, FIRST_LINE_TOP + LINE_H * k)
+    files['assets/axon/font/hud.json'] = json.dumps({'providers': providers}, ensure_ascii=True).encode()
     # różowy bossbar bez paska: zostaje sam napis (panel)
     for part, size in (('pink_background', (182, 5)), ('pink_progress', (182, 5))):
         buf = io.BytesIO()
         Image.new('RGBA', size).save(buf, 'PNG')
         files['assets/minecraft/textures/gui/sprites/boss_bar/%s.png' % part] = buf.getvalue()
     return files
+
+
+def znaki_txt():
+    """Lista dla AxonScoreboard (src/main/resources/hud_znaki.txt): numery znaków w kolejności indeksów."""
+    return ''.join('%x\n' % cp for cp in ZNAKI)

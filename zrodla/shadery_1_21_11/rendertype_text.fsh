@@ -31,6 +31,7 @@ flat in vec3 axonHudBg;
 flat in vec3 axonHudHead;
 flat in vec3 axonHudAcc;
 flat in vec4 axonHudAcc2;
+flat in vec4 axonHudExtra;
 
 out vec4 fragColor;
 
@@ -389,6 +390,11 @@ vec4 axonHudBackground() {
     // cień pod panelem (miękki, lekko w dół)
     float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, 1.5), size * 0.5, 5.0);
     vec4 shadow = vec4(0.0, 0.0, 0.0, 0.32 * (1.0 - smoothstep(-1.0, 5.0, ds)));
+    if (axonHudBox.w > 0.5) {
+        // poświata alarmu zamiast cienia
+        float pulse = 0.5 + 0.5 * sin(GameTime * 24000.0 * 0.26);
+        shadow = vec4(1.0, 0.2, 0.15, (0.25 + 0.3 * pulse) * (1.0 - smoothstep(0.0, 7.0, d)));
+    }
     float inside = 1.0 - smoothstep(-aa, aa, d);
     if (inside <= 0.0) {
         return shadow;
@@ -416,12 +422,129 @@ vec4 axonHudBackground() {
         alpha = 1.0;
     }
     vec4 panel = vec4(col, alpha * inside);
+    if (axonHudBox.w > 0.5) {
+        // alarm (rajd, atak): czerwona obwódka pulsuje
+        float pulse = 0.5 + 0.5 * sin(GameTime * 24000.0 * 0.26);
+        float rim = 1.0 - smoothstep(0.0, 1.6, -d);
+        panel.rgb = mix(panel.rgb, vec3(1.0, 0.25, 0.22), rim * (0.55 + 0.45 * pulse));
+        panel.a = max(panel.a, rim * inside);
+    }
     // panel nad cieniem
     float a = panel.a + shadow.a * (1.0 - panel.a);
     return vec4((panel.rgb * panel.a + shadow.rgb * shadow.a * (1.0 - panel.a)) / max(a, 1e-4), a);
 }
 
+// Pasek 30 × 6: tor, wypełnienie z gradientem, przesuwający się błysk i lekka poświata.
+vec4 axonHudBar() {
+    vec2 p = axonHudLocal;
+    float aa = max(fwidth(p.x), 1e-3);
+    vec3 col = axonHudExtra.rgb;
+    float f = axonHudExtra.a;
+    float d = axonRoundBox(p - vec2(15.0, 3.0), vec2(15.0, 3.0), 3.0);
+    float inside = 1.0 - smoothstep(-aa, aa, d);
+    vec4 glow = vec4(col, 0.18 * f * (1.0 - smoothstep(0.0, 2.0, d)));
+    if (inside <= 0.0) {
+        return glow;
+    }
+    vec3 track = mix(vec3(0.0), col, 0.18);
+    vec3 c = track;
+    float a = 0.75;
+    float fx = f * 30.0;
+    if (p.x < fx) {
+        c = mix(col * 1.25, col * 0.7, clamp(p.y / 6.0, 0.0, 1.0));
+        float t = GameTime * 24000.0;
+        float band = mod(t * 0.9, 70.0) - 20.0;
+        c += vec3(0.35) * (1.0 - smoothstep(0.0, 5.0, abs(p.x - band - p.y)));
+        // jaśniejszy koniec wypełnienia
+        c += vec3(0.25) * (1.0 - smoothstep(0.0, 1.5, fx - p.x));
+        a = 1.0;
+    }
+    return vec4(c, a * inside);
+}
+
+// Powiadomienie: zaokrąglone tło w kolorze skinu z barwną poświatą od krawędzi.
+vec4 axonHudToast() {
+    vec2 size = axonHudBox.xy;
+    vec2 p = axonHudLocal;
+    float aa = max(fwidth(p.x), 1e-3);
+    float d = axonRoundBox(p - size * 0.5, size * 0.5, 4.0);
+    float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, 1.5), size * 0.5, 5.0);
+    vec4 shadow = vec4(0.0, 0.0, 0.0, 0.3 * (1.0 - smoothstep(-1.0, 5.0, ds)));
+    float inside = 1.0 - smoothstep(-aa, aa, d);
+    if (inside <= 0.0) {
+        return shadow;
+    }
+    vec3 col = axonHudExtra.rgb;
+    vec3 c = mix(axonHudHead, axonHudBg, clamp(p.y / 16.0, 0.0, 1.0));
+    c = mix(c, col, 0.22 * (1.0 - clamp(p.x / max(size.x, 1.0), 0.0, 1.0)));
+    c = mix(c, col, 0.7 * (1.0 - smoothstep(0.0, 1.2, -d)));
+    vec4 panel = vec4(c, 0.93 * inside);
+    float a = panel.a + shadow.a * (1.0 - panel.a);
+    return vec4((panel.rgb * panel.a + shadow.rgb * shadow.a * (1.0 - panel.a)) / max(a, 1e-4), a);
+}
+
+// Pionowy pasek czasu powiadomienia (opada w miarę upływu czasu, liczony z zegara gry).
+vec4 axonHudTimer() {
+    vec2 p = axonHudLocal;
+    float left = axonHudExtra.a;
+    if (axonHudBox.z > 250.0) {
+        discard;
+    }
+    float filled = 16.0 * (1.0 - left);
+    vec3 c = p.y >= filled ? axonHudExtra.rgb * 1.1 : axonHudExtra.rgb * 0.25;
+    // na starcie błysk
+    float flash = 1.0 - clamp(axonHudBox.z / 6.0, 0.0, 1.0);
+    return vec4(c + vec3(flash * 0.6), 0.95);
+}
+
+// Tło banera: ciemny pas z rozchodzącymi się od środka liniami akcentu; pojawia się i gaśnie z zegarem gry.
+vec4 axonHudBanner() {
+    float age = axonHudBox.z;
+    float w = axonHudBox.x;
+    float life = clamp(age / 6.0, 0.0, 1.0) * (1.0 - clamp((age - 70.0) / 10.0, 0.0, 1.0));
+    if (age > 80.0 || life <= 0.0) {
+        discard;
+    }
+    vec2 p = axonHudLocal;
+    float hw = w * 0.5 + 40.0;
+    float edge = 1.0 - smoothstep(hw * 0.45, hw, abs(p.x));
+    float vy = 1.0 - smoothstep(10.0, 23.0, abs(p.y - 9.0));
+    vec3 acc = axonHudAccent(p.x + hw);
+    vec4 band = vec4(mix(axonHudBg, acc, 0.12), 0.72 * edge * vy);
+    float spread = clamp(age / 12.0, 0.0, 1.0) * hw;
+    float line = (1.0 - smoothstep(0.0, 1.0, abs(abs(p.y - 9.0) - 13.0))) * (1.0 - smoothstep(spread * 0.6, spread, abs(p.x)));
+    vec4 l = vec4(acc * 1.2, line);
+    vec4 o = vec4(mix(band.rgb, l.rgb, l.a), max(band.a, l.a));
+    o.a *= life;
+    return o;
+}
+
 void main() {
+    if (axonHud == 4) {
+        fragColor = axonHudBar();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
+    if (axonHud == 5) {
+        fragColor = axonHudToast();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
+    if (axonHud == 8) {
+        fragColor = axonHudTimer();
+        return;
+    }
+    if (axonHud == 7) {
+        fragColor = axonHudBanner();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
     if (axonHud == 2) {
         fragColor = axonHudBackground();
         if (fragColor.a < 0.004) {
