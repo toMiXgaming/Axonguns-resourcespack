@@ -473,6 +473,8 @@ def pliki():
     files['assets/minecraft/font/default.json'] = json.dumps({'providers': providers}, ensure_ascii=True,
                                                              indent=1).encode()
     files['assets/axon/font/maly.json'] = json.dumps(maly(), ensure_ascii=True, indent=1).encode()
+    from . import hud
+    files.update(hud.pliki())
     return files
 
 

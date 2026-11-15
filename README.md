@@ -361,6 +361,26 @@ Listy znaków: `zrodla/axoncore/maly_znaki.json` (kopia z 1.21.4). Tło do barwi
 Od AxonScoreboard 1.3 panel ma też tło do barwienia skinem (U+EA60–U+EA68: nagłówek, wiersz i stopka
 w trzech poziomach przezroczystości), ozdobę nagłówka (U+EA69) i wzór wierszy (U+EA6A) dla skinów VIP i Elity.
 
+### Panel HUD (AxonScoreboard 1.6, prototyp)
+
+Druga odmiana tablicy: zaokrąglony panel w wybranym rogu ekranu i w wybranej skali, zamiast sidebara po prawej.
+Plugin wysyła cały panel jako tytuł jednego **różowego bossbara** (pasek różowego bossbara jest w paczce przezroczysty:
+`textures/gui/sprites/boss_bar/pink_*.png`), a shader `rendertype_text` przenosi go do rogu:
+
+- każda linia ma własną czcionkę `axon:hud_0`…`axon:hud_14` (tytuł `axon:hud_t`), w której znaki vanilli, ikony, paski
+  i logo są niżej o 18 + 9k px; tytuł ma szerokość 0, więc klient zaczyna go na środku ekranu, y = 3,
+- kolor znaku to znacznik: R 64–79 tekst, 80–95 tło, 96–111 linia oddzielająca, młodsze 4 bity R to róg i skala;
+  kolor tekstu jest w G i B (RGB 4-4-4) z 4 bitami sumy kontrolnej, więc zwykłe napisy (tytuły okien itd.) nie są ruszane,
+- tło to znak skinu U+E100 + numer (grafit, lód, szmaragd, ametyst, korona, zorza): kafel 2×2 z kolorami tła, nagłówka
+  i akcentów (alfa 253 w tle to znak rozpoznawczy), z którego shader rysuje panel z zaokrągleniem, cieniem,
+  nagłówkiem, paskiem akcentu i lśnieniem skinów Elity,
+- symbole spoza bitmap vanilli, których używa plugin (strzałki ⬆⬈➡…, ✖ ♛ ✈ ✦ ✪ ⛁ ✚ ▂ ▆), są w czcionkach HUD jako bitmapy
+  z GNU Unifont 16 (SIL OFL 1.1), żeby przesuwały się razem z linią.
+
+Sprawdzone w prawdziwym kliencie 1.21.4 i 1.21.11 (shadery się kompilują, panel w czterech rogach i skalach,
+napis „Building Blocks” w ekwipunku bez zmian). Generator: `zrodla/axoncore/hud.py` (woła go `tablica.pliki()`).
+Uwaga: każdy inny różowy bossbar na serwerze też nie będzie miał paska (sam napis zostaje).
+
 ## Wgranie na serwer
 
 Repo musi być **publiczne**, inaczej gracze nie pobiorą paczki. W `plugins/QualityArmory/config.yml`:

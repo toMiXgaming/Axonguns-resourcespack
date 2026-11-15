@@ -14,6 +14,7 @@ uniform vec4 ColorModulator;
 uniform float FogStart;
 uniform float FogEnd;
 uniform vec4 FogColor;
+uniform float GameTime;
 
 in float vertexDistance;
 in vec4 vertexColor;
@@ -26,6 +27,13 @@ flat in vec4 axonSpriteA[AXON_SPRITES];
 flat in vec4 axonSpriteB[AXON_SPRITES];
 flat in vec2 axonSpriteLim[AXON_SPRITES];
 flat in float axonClock;
+flat in int axonHud;
+in vec2 axonHudLocal;
+flat in vec4 axonHudBox;
+flat in vec3 axonHudBg;
+flat in vec3 axonHudHead;
+flat in vec3 axonHudAcc;
+flat in vec4 axonHudAcc2;
 
 out vec4 fragColor;
 
@@ -358,7 +366,77 @@ vec3 axonSharp(vec2 uv) {
     return mix(mix(c00, c10, w.x), mix(c01, c11, w.x), w.y);
 }
 
+// ---------------------------------------------------------------- panel HUD (AxonScoreboard)
+const float AXON_HUD_ALPHA[5] = float[5](0.94, 0.8, 0.62, 0.42, 0.22);
+
+float axonRoundBox(vec2 p, vec2 hsize, float r) {
+    vec2 q = abs(p) - hsize + r;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+vec3 axonHudAccent(float x) {
+    // skiny Elity (alfa 254 w akcencie 2): akcent przelewa się w drugi kolor i przesuwa się po nim błysk
+    if (axonHudAcc2.a > 0.999) {
+        return axonHudAcc;
+    }
+    float t = GameTime * 24000.0 / 20.0;
+    float wave = 0.5 + 0.5 * sin(t * 1.3 - x * 0.05);
+    return mix(axonHudAcc, axonHudAcc2.rgb, wave * 0.6);
+}
+
+vec4 axonHudBackground() {
+    vec2 size = axonHudBox.xy;
+    vec2 p = axonHudLocal;
+    float aa = max(fwidth(p.x), 1e-3);
+    float d = axonRoundBox(p - size * 0.5, size * 0.5, 4.0);
+    // cień pod panelem (miękki, lekko w dół)
+    float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, 1.5), size * 0.5, 5.0);
+    vec4 shadow = vec4(0.0, 0.0, 0.0, 0.32 * (1.0 - smoothstep(-1.0, 5.0, ds)));
+    float inside = 1.0 - smoothstep(-aa, aa, d);
+    if (inside <= 0.0) {
+        return shadow;
+    }
+    float alpha = AXON_HUD_ALPHA[int(clamp(axonHudBox.z, 0.0, 4.0))];
+    vec3 col;
+    if (p.y < 16.0) {
+        col = mix(axonHudHead * 1.18, axonHudHead, p.y / 16.0);
+        alpha = max(alpha, 0.5);
+    } else {
+        col = mix(axonHudBg * 1.12, axonHudBg, clamp((p.y - 16.0) / 40.0, 0.0, 1.0));
+    }
+    // jasna obwódka 1 px przy krawędzi
+    col = mix(col, col + vec3(0.09), 1.0 - smoothstep(0.0, 1.2, -d));
+    vec3 acc = axonHudAccent(p.x);
+    // linia pod nagłówkiem: od akcentu do przezroczystej
+    if (p.y >= 15.0 && p.y < 16.0) {
+        float f = 1.0 - clamp(p.x / size.x, 0.0, 1.0) * 0.8;
+        col = mix(col, acc, 0.9 * f);
+        alpha = max(alpha, 0.9);
+    }
+    // pasek akcentu z lewej, pod nagłówkiem
+    if (p.x >= 0.0 && p.x < 2.0 && p.y >= 16.0 && p.y < size.y - 4.0) {
+        col = acc;
+        alpha = 1.0;
+    }
+    vec4 panel = vec4(col, alpha * inside);
+    // panel nad cieniem
+    float a = panel.a + shadow.a * (1.0 - panel.a);
+    return vec4((panel.rgb * panel.a + shadow.rgb * shadow.a * (1.0 - panel.a)) / max(a, 1e-4), a);
+}
+
 void main() {
+    if (axonHud == 2) {
+        fragColor = axonHudBackground();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
+    if (axonHud == 3) {
+        float f = 1.0 - clamp(axonHudLocal.x / max(axonHudBox.x, 1.0), 0.0, 1.0);
+        fragColor = vec4(axonHudAccent(axonHudLocal.x), 0.25 + 0.6 * f);
+        return;
+    }
     if (axonMap == 1) {
         // Mapa AxonMap: bez światła i mgły. Ostry ekran (gęstość 2) skalujemy gładko, zwykły jak dotąd.
         if (axonDensity > 1) {
