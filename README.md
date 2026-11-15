@@ -353,6 +353,9 @@ Białe elementy przyjmują kolor tekstu, więc logo, akcent i linie mają kolor 
 
 Generator: `zrodla/axoncore/tablica.py` (woła go `gen_axoncore.pliki()`), łatka gotowych zipów: `python3 zrodla/dodaj_tablice.py`.
 
+Od AxonScoreboard 1.3 panel ma też tło do barwienia skinem (U+EA60–U+EA68: nagłówek, wiersz i stopka
+w trzech poziomach przezroczystości), ozdobę nagłówka (U+EA69) i wzór wierszy (U+EA6A) dla skinów VIP i Elity.
+
 ## Wgranie na serwer
 
 Repo musi być **publiczne**, inaczej gracze nie pobiorą paczki. W `plugins/QualityArmory/config.yml`:

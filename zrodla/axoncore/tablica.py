@@ -46,6 +46,16 @@ IKONY = ['profil', 'kasa', 'staty', 'aktywnosc', 'dzialka', 'serwer', 'swiat', '
          'pvp', 'oaza', 'kompas_dzialka', 'kompas_struktura', 'serce', 'elita']
 for i, n in enumerate(IKONY):
     GLYPHS[0xEA10 + i] = ('ikona_' + n, 8, 7)
+# Panel do barwienia (skiny): białe/szare tło, kolor daje kod koloru tekstu (&#RRGGBB),
+# w trzech poziomach krycia (0 = pełne, 1 = średnie, 2 = lekkie). Plus ozdoba nagłówka i wzór wierszy
+# dla lepszych skinów.
+KRYCIE = (242, 188, 128)
+for L in range(3):
+    GLYPHS[0xEA60 + 3 * L] = ('tlo_naglowek_%d' % L, HH, HH - 2)
+    GLYPHS[0xEA61 + 3 * L] = ('tlo_wiersz_%d' % L, 9, 7)
+    GLYPHS[0xEA62 + 3 * L] = ('tlo_stopka_%d' % L, 12, 7)
+GLYPHS[0xEA69] = ('ozdoba', HH, HH - 2)
+GLYPHS[0xEA6A] = ('wzor', 9, 7)
 PASKI = 21                       # 0%, 5%, ..., 100%
 for i in range(PASKI):
     GLYPHS[0xEA40 + i] = ('pasek_%02d' % i, 6, 6)
@@ -58,7 +68,10 @@ for k in range(9):
 
 # advance, które musi znać plugin (PackGlyphs.java)
 ADVANCE = {'naglowek': 256, 'naglowek_akcent': 256, 'wiersz': 256, 'stopka': 256, 'linia': 256,
-           'krawedz': 3, 'logo': 64, 'ikona': 9, 'pasek': 31}
+           'krawedz': 3, 'logo': 64, 'ikona': 9, 'pasek': 31, 'ozdoba': 256, 'wzor': 256}
+for _L in range(3):
+    for _n in ('tlo_naglowek', 'tlo_wiersz', 'tlo_stopka'):
+        ADVANCE['%s_%d' % (_n, _L)] = 256
 
 SS = 4  # nadpróbkowanie hi-res znaków (logo, ikony)
 
@@ -145,6 +158,80 @@ def krawedz():
     for y in range(9):
         img.putpixel((0, y), (255, 255, 255, 255))
         img.putpixel((1, y), (255, 255, 255, 90))
+    return img
+
+
+def tlo_naglowek(L):
+    """Nagłówek do barwienia: jasny u góry, lekko ciemniejszy w dół, ciemna kreska na dole."""
+    a = KRYCIE[L]
+    img = Image.new('RGBA', (WIDE, HH))
+    px = img.load()
+    for y in range(HH):
+        v = int(255 - 40 * y / (HH - 1))
+        for x in range(WIDE):
+            px[x, y] = (v, v, v, min(255, a + 6))
+    for x in range(WIDE):
+        px[x, HH - 1] = (70, 70, 70, min(255, a + 10))
+    _rounded_left(img, 4, 0)
+    return img
+
+
+def tlo_wiersz(L, stopka=False):
+    a = KRYCIE[L]
+    h = 12 if stopka else 9
+    img = Image.new('RGBA', (WIDE, h))
+    px = img.load()
+    for y in range(h):
+        for x in range(WIDE):
+            px[x, y] = (255, 255, 255, a)
+    if stopka:
+        for x in range(WIDE):
+            px[x, h - 1] = (90, 90, 90, min(255, a + 10))
+        _rounded_left(img, 0, 4)
+    return img
+
+
+def ozdoba():
+    """Ozdoba nagłówka lepszych skinów (barwiona drugim akcentem): narożnik, iskry u góry
+    i linia z rombem nad pierwszym wierszem. Wszystko przy lewej krawędzi, bo panel ma ~120–180 px."""
+    img = Image.new('RGBA', (WIDE, HH))
+    px = img.load()
+    # narożnik: dwie kreski 1 px od lewego górnego rogu
+    for i in range(2, 12):
+        px[i, 2] = (255, 255, 255, int(200 * (1 - (i - 2) / 10)))
+    for j in range(2, 10):
+        px[2, j] = (255, 255, 255, int(200 * (1 - (j - 2) / 8)))
+    # iskry wzdłuż górnej krawędzi, coraz słabsze
+    for k, x in enumerate(range(24, 190, 11)):
+        al = max(30, 170 - k * 10)
+        px[x, 3] = (255, 255, 255, al)
+        if k % 2 == 0:
+            px[x - 1, 3] = (255, 255, 255, al // 3)
+            px[x + 1, 3] = (255, 255, 255, al // 3)
+            px[x, 2] = (255, 255, 255, al // 3)
+            px[x, 4] = (255, 255, 255, al // 3)
+    # linia nad wierszami z małym rombem na początku
+    y = HH - 3
+    for x in range(10, WIDE):
+        t = (x - 10) / 170
+        px[x, y] = (255, 255, 255, max(0, int(150 * (1 - t))) if t < 1 else 0)
+    for dx, dy in ((0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)):
+        px[6 + dx, y + dy] = (255, 255, 255, 230)
+    px[WIDE - 1, 0] = (255, 255, 255, 1)       # stały advance 256
+    return img
+
+
+def wzor():
+    """Delikatne ukośne pasy na wierszach (okres 9 px w pionie = wysokość wiersza, więc łączą się)."""
+    img = Image.new('RGBA', (WIDE, 9))
+    px = img.load()
+    for y in range(9):
+        for x in range(WIDE):
+            d = (x + y) % 9
+            if d == 0:
+                fade = max(0.0, 1 - x / 200)
+                px[x, y] = (255, 255, 255, int(24 * fade))
+    px[WIDE - 1, 0] = (255, 255, 255, 1)
     return img
 
 
@@ -313,6 +400,12 @@ def pasek(i):
 def obrazy():
     out = {'naglowek': naglowek(), 'naglowek_akcent': naglowek_akcent(), 'logo': logo(),
            'wiersz': wiersz(), 'stopka': wiersz(True), 'linia': linia(), 'krawedz': krawedz()}
+    for L in range(3):
+        out['tlo_naglowek_%d' % L] = tlo_naglowek(L)
+        out['tlo_wiersz_%d' % L] = tlo_wiersz(L)
+        out['tlo_stopka_%d' % L] = tlo_wiersz(L, True)
+    out['ozdoba'] = ozdoba()
+    out['wzor'] = wzor()
     for n in IKONY:
         out['ikona_' + n] = ikona(n)
     for i in range(PASKI):
