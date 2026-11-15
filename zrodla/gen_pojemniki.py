@@ -346,7 +346,7 @@ CONTAINERS.update({n: globals()[n] for n in ('skrzynia_drewniana', 'skrzynka_nar
                                               'skrzynka_jedzenie', 'skrzynia_wojskowa', 'skrzynia_elitarna')})
 
 
-VANILLA_BLOCKS = {'barrel': 'beczka', 'barrel_open': 'beczka_otwarta'}
+from beczka_blok import VANILLA_BLOCKS  # noqa: E402  (barrel -> beczka, barrel_open -> beczka_otwarta)
 
 
 def render(n):
@@ -366,14 +366,9 @@ def pliki(src=None):
         mj = open(os.path.join(src, 'poj_%s.json' % n), 'rb').read()
         f['assets/axon/models/block/%s.json' % n] = mj
         f['assets/axon/textures/item/poj_%s.png' % n] = open(os.path.join(src, 'poj_%s.png' % n), 'rb').read()
-    for vanilla, n in VANILLA_BLOCKS.items():
-        m = json.loads(f['assets/axon/models/block/%s.json' % n])
-        m.pop('display', None)
-        m.pop('gui_light', None)
-        vt = 'axon:block/vanilla/poj_' + n               # od 1.21.9 model bloku może używać tylko atlasu block/
-        m['textures'] = {'0': vt, 'particle': vt}
-        f['assets/axon/textures/block/vanilla/poj_%s.png' % n] = f['assets/axon/textures/item/poj_%s.png' % n]
-        f['assets/minecraft/models/block/%s.json' % vanilla] = (json.dumps({'parent': 'minecraft:block/block', **m}, indent=1) + '\n').encode()
+    # beczka z Minecrafta: pełna kostka z rzutami okrągłej beczki (beczka_blok.py), inaczej prześwituje przez sąsiadów
+    from beczka_blok import pliki as beczka_blok
+    f.update(beczka_blok(f.__getitem__))
     return f
 
 
