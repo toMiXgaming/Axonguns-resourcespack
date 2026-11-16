@@ -522,7 +522,75 @@ vec4 axonHudBanner() {
     return o;
 }
 
+// Ramka minimapy: ciemny pierścień z cieniem i akcentem przy mapie, znacznik północy u góry.
+vec4 axonHudMapFrame() {
+    vec2 s = axonHudBox.xy;
+    vec2 p = axonHudLocal;
+    if (p.x >= 0.0 && p.y >= 0.0 && p.x < s.x && p.y < s.y) {
+        return vec4(0.0);
+    }
+    float aa = max(fwidth(p.x), 1e-3);
+    vec2 c = p - s * 0.5;
+    float d = axonRoundBox(c, s * 0.5 + 3.0, 4.0);
+    float ds = axonRoundBox(c - vec2(0.0, 1.5), s * 0.5 + 3.0, 5.0);
+    vec4 shadow = vec4(0.0, 0.0, 0.0, 0.35 * (1.0 - smoothstep(-1.0, 4.0, ds)));
+    float inside = 1.0 - smoothstep(-aa, aa, d);
+    vec3 col = axonHudBg * 1.1;
+    float edge = max(abs(c.x) - s.x * 0.5, abs(c.y) - s.y * 0.5);
+    if (edge < 1.0) {
+        col = mix(axonHudAccent(p.x), col, 0.25);   // obwódka przy mapie
+    }
+    if (p.y < 0.0 && abs(c.x) < 3.0 + p.y) {
+        col = vec3(1.0, 0.35, 0.3);                  // północ
+    }
+    vec4 ring = vec4(col, inside);
+    float a = ring.a + shadow.a * (1.0 - ring.a);
+    return vec4((ring.rgb * ring.a + shadow.rgb * shadow.a * (1.0 - ring.a)) / max(a, 1e-4), a);
+}
+
+// Znacznik na minimapie: 0 = gracz (strzałka w stronę patrzenia), inne = kropka w kolorze rodzaju.
+const vec3 AXON_PIN_COLORS[8] = vec3[8](vec3(1.0), vec3(1.0, 0.78, 0.25), vec3(1.0, 0.3, 0.3), vec3(0.3, 0.9, 0.5),
+        vec3(0.3, 0.85, 1.0), vec3(1.0, 0.85, 0.2), vec3(0.75, 0.5, 1.0), vec3(1.0));
+vec4 axonHudPin() {
+    vec2 p = axonHudLocal;
+    int type = int(axonHudBox.x + 0.5);
+    float aa = max(fwidth(p.x), 1e-3);
+    if (type == 0) {
+        float yaw = radians(axonHudBox.y);
+        vec2 fwd = vec2(-sin(yaw), cos(yaw));     // yaw 0 = południe = w dół mapy
+        vec2 q = vec2(dot(p, vec2(-fwd.y, fwd.x)), dot(p, fwd));
+        float tri = max(abs(q.x) * 1.15 + q.y - 3.6, -q.y - 2.6 - abs(q.x) * 0.55);
+        float body = 1.0 - smoothstep(-aa, aa, tri);
+        float rim = 1.0 - smoothstep(-aa, aa, tri - 1.0);
+        vec3 col = mix(vec3(0.05), vec3(1.0), body);
+        return vec4(col, max(body, rim * 0.9));
+    }
+    float r = length(p);
+    float dot_ = 1.0 - smoothstep(2.6 - aa, 2.6 + aa, r);
+    float rim = 1.0 - smoothstep(3.6 - aa, 3.6 + aa, r);
+    vec3 pc = type == 1 ? axonHudAcc2.rgb : AXON_PIN_COLORS[type];
+    return vec4(mix(vec3(0.05), pc, dot_), max(dot_, rim * 0.85));
+}
+
 void main() {
+    if (axonHud == 12) {
+        fragColor = vec4(vertexColor.rgb, 1.0);
+        return;
+    }
+    if (axonHud == 10) {
+        fragColor = axonHudMapFrame();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
+    if (axonHud == 11) {
+        fragColor = axonHudPin();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
     if (axonHud == 4) {
         fragColor = axonHudBar();
         if (fragColor.a < 0.004) {

@@ -33,6 +33,7 @@ SKINY = [
     ('zorza', '0A1020', '14234A', '3DF5C8', 'B072FF', True),
 ]
 SKIN_CHAR = 0xE100
+MAP_CHAR = 0xE110       # komórka minimapy: E110 = wiersze 0–15 (alfa 252), E111 = 16–31 (alfa 251)
 MARKER = 1024           # wysokość (i szerokość) znacznika w px GUI; advance = MARKER + 1
 
 LINES = 24          # 15 linii panelu + powiadomienia pod nim
@@ -177,6 +178,13 @@ def pliki():
         # ale znaki, które nachodzą na wcześniejsze, rysuje nad nimi. Tak tekst zawsze trafia nad tło panelu.
         providers.append({'type': 'bitmap', 'file': FONT_REF + name, 'height': MARKER, 'ascent': 7,
                           'chars': [chr(SKIN_CHAR + i)]})
+    # minimapa: piksel 1 × 1 (advance 2), kolor i wiersz niesie znacznik koloru, kolumnę kursor
+    for k, alpha in enumerate((252, 251)):
+        buf = io.BytesIO()
+        Image.new('RGBA', (1, 1), (255, 255, 255, alpha)).save(buf, 'PNG')
+        files[FONT_DIR + 'mapa_%d.png' % k] = buf.getvalue()
+        providers.append({'type': 'bitmap', 'file': FONT_REF + 'mapa_%d.png' % k, 'height': 1, 'ascent': 0,
+                          'chars': [chr(MAP_CHAR + k)]})
     for cp in UNIFONT:
         buf = io.BytesIO()
         unifont_png(cp).save(buf, 'PNG')

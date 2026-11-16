@@ -239,6 +239,7 @@ bool axonIsXpText() {
 #define AXON_HUD_MARGIN 4.0
 #define AXON_MARKER 1024.0   // znaczniki (kafel skinu) mają 1024 × 1024 px GUI, żeby 1.21.6+ rysował tekst nad nimi
 #define AXON_LAYER_DY 19.0
+#define AXON_MAP_CELL 2.0
 const float AXON_HUD_SCALES[4] = float[4](0.75, 1.0, 1.25, 1.5);
 const float AXON_BANNER_SCALES[4] = float[4](1.5, 2.0, 2.5, 3.0);
 const float AXON_TOAST_TICKS[8] = float[8](40.0, 60.0, 80.0, 100.0, 120.0, 160.0, 200.0, 240.0);
@@ -300,7 +301,7 @@ bool axonHudVertex() {
     vec2 guiSize = axonGuiSize(ProjMat);
     vec2 local = Position.xy - vec2(floor(guiSize.x * 0.5), 3.0);
     ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
-    if (c.r < 64 || c.r >= 192) {
+    if (c.r < 64 || c.r >= 240) {
         return false;
     }
     int settings = c.r & 15;
@@ -309,6 +310,27 @@ bool axonHudVertex() {
     bool right = (settings & 1) == 1 && !banner;
     vec2 at = local;
     float z = Position.z;
+    if (kind == 8) {
+        // komórka minimapy: znak 1 × 1 (alfa 252 = wiersze 0–15, 251 = 16–31), kolumna z kursora, kwadrat 2 × 2 px
+        int vc = gl_VertexID % 4;
+        vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
+        if (abs(local.y - cv.y) > 40.0) {
+            return false;
+        }
+        ivec2 tt = ivec2(floor(UV0 * vec2(textureSize(Sampler0, 0)) - cv + 0.5));
+        float ta = texelFetch(Sampler0, tt, 0).a * 255.0;
+        int hi = abs(ta - 252.0) < 0.5 ? 0 : (abs(ta - 251.0) < 0.5 ? 16 : -1);
+        if (hi < 0) {
+            return false;
+        }
+        float row = float((c.b & 15) + hi);
+        at = vec2(local.x - cv.x, row * AXON_MAP_CELL) + cv * AXON_MAP_CELL;
+        vertexColor = vec4(float(c.g >> 4), float(c.g & 15), float(c.b >> 4), 15.0) / 15.0;
+        axonHud = 12;
+        axonHudLocal = cv;
+        gl_Position = ProjMat * ModelViewMat * vec4(axonHudPlace(settings, at, guiSize), z, 1.0);
+        return true;
+    }
     if (kind == 0 || kind == 5) {
         // tekst jedzie w drugim bossbarze (tło w pierwszym, żeby 1.21.6+ rysował tekst nad nim), 19 px niżej
         local.y -= AXON_LAYER_DY;
@@ -381,6 +403,19 @@ bool axonHudVertex() {
             axonHudExtra = vec4(axonHudAcc, clamp(1.0 - age / total, 0.0, 1.0));
             axonHudBox = vec4(3.0, 16.0, age, 0.0);
             z -= 1.0;
+        } else if (kind == 9) {
+            // ramka minimapy (środek rysują komórki): znak na lewej krawędzi mapy, G = bok / 2
+            float s = float(c.g * 2);
+            p = vec2(-6.0) + cc * vec2(s + 12.0);
+            at = vec2(local.x - cc.x * AXON_MARKER, 0.0) + p;
+            axonHudBox = vec4(s, s, 0.0, 0.0);
+            z -= 2.0;
+        } else if (kind == 10) {
+            // znacznik na minimapie: środek w (kursor, B / 2), G = rodzaj | kierunek (32 kroki) << 3
+            p = vec2(-5.0) + cc * 10.0;
+            at = vec2(local.x - cc.x * AXON_MARKER, float(c.b) * 0.5) + p;
+            axonHudBox = vec4(float(c.g & 7), float(c.g >> 3) * 11.25, 0.0, 0.0);
+            z += 1.0;
         } else {
             return false;
         }
