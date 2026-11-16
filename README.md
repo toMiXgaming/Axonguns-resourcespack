@@ -128,6 +128,12 @@ Paczka zawiera też shadery `rendertype_text` i `position_tex_color` (w nakładk
 
 Ten sam shader rysuje pełnoekranowe GUI AxonCore (warsztaty, mini gry, skrzynie) z AxonOverlay. Zwykły ekran to 5×3 mapy (640×384 px). Ostry ekran to 10×6 map (1280×768 px): znacznik ma wtedy w ostatnim wierszu odwrócony wzór, numer kafla jest zapisany jako reszta z dzielenia przez 16 (piksele 8–23) i wynik dzielenia przez 16 (piksele 24–31). Ostry ekran jest skalowany gładko (piksel obrazu ma stały kolor, a krawędź między pikselami ma szerokość jednego piksela ekranu), a sprity i kursor są liczone w pikselach logicznych 640×384.
 
+
+### Minimapa AxonMap
+
+`rendertype_text` (oba zestawy: `zrodla/shadery/` i `zrodla/shadery_1_21_11/`, część „Minimapa AxonMap”) rysuje też minimapę z pluginu AxonMap. Teren nie jest w tej paczce: plugin po każdym wipe buduje osobną małą paczkę z kaflami mapy (czcionka `axonmap:minimapa`) i wysyła ją graczom nad tą paczką. Tutaj jest tylko shader.
+
+Plugin stawia przy graczu niewidzialny wyświetlacz tekstu ze znakami tej czcionki. Shader rozpoznaje je po kolorze (R od 0xE0) i alfie tekstury (250 kafel terenu, 249 ramka i znaczniki), a z położenia wierzchołka względem kamery liczy pozycję i obrót kamery w każdej klatce, więc mapa w rogu ekranu przesuwa się i obraca płynnie. Kolor znaku niesie ustawienia gracza (róg, rozmiar, zasięg, kwadrat/koło, obrót) i położenie kafla albo znacznika. Bez paczki z pluginu shader nic nie rysuje, a zwykły tekst w świecie wygląda jak wcześniej.
 ## Reaktor działki (AxonPlot)
 
 Rdzeń działki z [AxonPlot](https://github.com/toMiXgaming/AXONPLOT) wygląda jak reaktor. Plugin stawia na bloku rdzenia ItemDisplay z przedmiotem `crying_obsidian` i `custom_model_data`, a `assets/minecraft/items/crying_obsidian.json` wybiera po tej liczbie model z `assets/axon/`. Zwykły crying obsidian (bez liczby) wygląda jak w vanilli.

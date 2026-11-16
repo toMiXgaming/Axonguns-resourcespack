@@ -57,6 +57,9 @@ flat out vec3 axonHudHead;
 flat out vec3 axonHudAcc;
 flat out vec4 axonHudAcc2;
 flat out vec4 axonHudExtra;
+flat out vec4 axonMiniA;
+flat out vec4 axonMiniB;
+out vec2 axonMiniL;
 
 // AxonMap: ekran mapy na cały ekran. Musi się zgadzać z pluginem (OverlayLayout).
 #define AXON_COLS 5
@@ -392,6 +395,116 @@ bool axonHudVertex() {
     return true;
 }
 
+const float AXON_MINI_RANGE[4] = float[4](32.0, 64.0, 96.0, 128.0);
+// ── Minimapa AxonMap ─────────────────────────────────────────────────────────────────────────────
+// Znaki czcionki axonmap:minimapa stoją w niewidzialnym wyświetlaczu tekstu przy graczu (kotwica w punkcie siatki
+// co 16 bloków). W świecie wierzchołek ma Position = położenie względem kamery, więc shader zna pozycję i kierunek
+// kamery w każdej klatce: mapa przesuwa się i obraca płynnie, bez czekania na serwer.
+//   kafel terenu 128 × 128 (alfa 250 w lewym górnym tekselu), kolor: F | ustawienia 8 | dx 3 | dz 3 | ax 3 | az 3
+//   znacznik / ramka: teksel 1 × 1 z alfą 249, R = ustawienia, G = rola (1 tło, 2 wierzch, 3 znacznik);
+//   znacznik ma kolor E | rodzaj 3 | daleko 1, G = dx + 128, B = dz + 128 (bloki od kotwicy, przy zasięgu 96+ co 2 bloki)
+//   ustawienia: róg 2 | rozmiar 2 | zasięg 2 | koło 1 | obrót 1
+const float AXON_MINI_SIDE[4] = float[4](0.20, 0.27, 0.35, 0.45);
+const float AXON_MINI_PAD = 0.07;
+
+vec4 axonMiniRect(int s) {
+    float unit = ScreenSize.y;
+    float hs = floor(AXON_MINI_SIDE[(s >> 2) & 3] * unit * 0.5);
+    float m = floor(0.025 * unit);
+    int corner = s & 3;
+    float cx = (corner & 1) == 1 ? ScreenSize.x - m - hs : m + hs;
+    float cy = corner >= 2 ? ScreenSize.y - m - hs - floor(0.14 * unit) : m + hs;
+    return vec4(cx, cy, hs, 0.0);
+}
+
+vec4 axonMiniClip(vec2 px, float z) {
+    return vec4(px.x / ScreenSize.x * 2.0 - 1.0, 1.0 - px.y / ScreenSize.y * 2.0, z, 1.0);
+}
+
+vec2 axonMiniFacing() {
+    // przód kamery w poziomie; patrząc pionowo w dół/górę bierzemy wektor „do góry” kamery
+    vec3 fwd = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
+    vec3 up = vec3(ModelViewMat[0][1], ModelViewMat[1][1], ModelViewMat[2][1]);
+    vec2 f = fwd.xz - up.xz * fwd.y;
+    return length(f) > 1e-4 ? normalize(f) : vec2(0.0, 1.0);
+}
+
+bool axonMiniVertex() {
+    if (ProjMat[2][3] == 0.0) {
+        return false;
+    }
+    ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
+    int kind = c.r >> 4;
+    if (kind < 14) {
+        return false;
+    }
+    int vc = gl_VertexID % 4;
+    vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
+    vec2 atlas = vec2(textureSize(Sampler0, 0));
+    vec2 f = axonMiniFacing();
+    int s;
+    float z;
+    vec2 l;
+    if (kind == 15) {
+        ivec2 t0 = ivec2(floor(UV0 * atlas - cv * 128.0 + 0.5));
+        if (abs(texelFetch(Sampler0, t0, 0).a * 255.0 - 250.0) > 0.5) {
+            return false;
+        }
+        int bits = (c.r & 15) << 16 | c.g << 8 | c.b;
+        s = (bits >> 12) & 255;
+        vec2 d = vec2(float(((bits >> 9) & 7) - 2), float(((bits >> 6) & 7) - 2));
+        vec2 a = vec2(float((bits >> 3) & 7), float(bits & 7)) * 16.0;
+        axonMiniA = vec4(a - Position.xz - d * 128.0, 5.0, float(s));
+        axonMiniB = vec4(vec2(t0), f);
+        l = cv * 2.0 - 1.0;
+        z = -0.992;
+    } else {
+        ivec2 t0 = ivec2(floor(UV0 * atlas - cv + 0.5));
+        vec4 tx = texelFetch(Sampler0, t0, 0);
+        if (abs(tx.a * 255.0 - 249.0) > 0.5) {
+            return false;
+        }
+        s = int(tx.r * 255.0 + 0.5);
+        int role = int(tx.g * 255.0 + 0.5);
+        axonMiniB = vec4(0.0, 0.0, f);
+        if (role == 3) {
+            // znacznik: pozycja względem kamery = przesunięcie od kotwicy + Position
+            float range = AXON_MINI_RANGE[(s >> 4) & 3];
+            // przy zasięgu 96 i 128 bloków jednostka przesunięcia to 2 bloki (mieści ±254)
+            float unit = ((s >> 4) & 3) >= 2 ? 2.0 : 1.0;
+            vec2 rel = vec2(float(c.g - 128), float(c.b - 128)) * unit + Position.xz;
+            vec2 r = vec2(-f.y, f.x);
+            vec2 p = ((s >> 7) & 1) == 1 ? vec2(dot(rel, r), -dot(rel, f)) : rel;
+            p /= range;
+            bool far = (c.r & 1) == 1;
+            float edge = ((s >> 6) & 1) == 1 ? length(p) : max(abs(p.x), abs(p.y));
+            if (far || edge > 0.9) {
+                p *= 0.9 / max(edge, 1e-4);
+                far = true;
+            }
+            axonMiniA = vec4(p, 3.0 + float((c.r >> 1) & 7) / 16.0, float(s));
+            axonMiniB.xy = vec2(far ? 1.0 : 0.0, 0.0);
+            vec4 rect = axonMiniRect(s);
+            float ps = max(4.0, floor(rect.z * 0.09));
+            l = cv * 2.0 - 1.0;
+            gl_Position = axonMiniClip(rect.xy + p * rect.z + l * ps, -0.995);
+            axonMiniL = l;
+            vertexColor = vec4(1.0);
+            texCoord0 = UV0;
+            return true;
+        }
+        axonMiniA = vec4(0.0, 0.0, float(role), float(s));
+        l = (cv * 2.0 - 1.0) * (1.0 + AXON_MINI_PAD);
+        z = role == 1 ? -0.990 : -0.997;
+    }
+    vec4 rect = axonMiniRect(s);
+    gl_Position = axonMiniClip(rect.xy + l * rect.z, z);
+    axonMiniL = l;
+    vertexColor = vec4(1.0);
+    texCoord0 = UV0;
+    return true;
+}
+
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     axonHud = 0;
@@ -402,6 +515,9 @@ void main() {
     axonHudAcc = vec3(0.0);
     axonHudAcc2 = vec4(0.0);
     axonHudExtra = vec4(0.0);
+    axonMiniA = vec4(0.0);
+    axonMiniB = vec4(0.0);
+    axonMiniL = vec2(0.0);
 
     vertexDistance = fog_distance(Position, FogShape);
     vertexColor = Color * texelFetch(Sampler2, UV2 / 16, 0);
@@ -418,6 +534,10 @@ void main() {
     }
 
     if (axonHudVertex()) {
+        return;
+    }
+    if (axonMiniVertex()) {
+        vertexDistance = 0.0;
         return;
     }
 

@@ -35,6 +35,9 @@ flat in vec3 axonHudHead;
 flat in vec3 axonHudAcc;
 flat in vec4 axonHudAcc2;
 flat in vec4 axonHudExtra;
+flat in vec4 axonMiniA;
+flat in vec4 axonMiniB;
+in vec2 axonMiniL;
 
 out vec4 fragColor;
 
@@ -522,7 +525,135 @@ vec4 axonHudBanner() {
     return o;
 }
 
+const float AXON_MINI_RANGE[4] = float[4](32.0, 64.0, 96.0, 128.0);
+const float AXON_MINI_PAD_F = 0.07;
+// ── Minimapa AxonMap (opis w rendertype_text.vsh) ───────────────────────────────────────────────
+bool axonMiniOutside(vec2 l, int s, float grow) {
+    if (((s >> 6) & 1) == 1) {
+        return dot(l, l) > (1.0 + grow) * (1.0 + grow);
+    }
+    vec2 q = abs(l) - vec2(1.0 + grow - 0.08);
+    return length(max(q, 0.0)) > 0.08;
+}
+
+vec4 axonMiniTile() {
+    vec2 l = axonMiniL;
+    int s = int(axonMiniA.w + 0.5);
+    if (axonMiniOutside(l, s, 0.0)) {
+        return vec4(0.0);
+    }
+    float range = AXON_MINI_RANGE[(s >> 4) & 3];
+    vec2 f = axonMiniB.zw;
+    vec2 r = vec2(-f.y, f.x);
+    // cztery próbki na piksel: przy oddaleniu teren nie migocze
+    vec2 dl = vec2(dFdx(l.x), dFdy(l.y)) * 0.25;
+    vec4 acc = vec4(0.0);
+    for (int i = 0; i < 4; i++) {
+        vec2 ll = l + vec2(i == 0 || i == 2 ? -dl.x : dl.x, i < 2 ? -dl.y : dl.y);
+        vec2 off = ((s >> 7) & 1) == 1 ? (r * ll.x - f * ll.y) * range : ll * range;
+        vec2 t = axonMiniA.xy + off;
+        if (t.x < 0.0 || t.y < 0.0 || t.x >= 128.0 || t.y >= 128.0) {
+            continue;
+        }
+        vec4 c = texelFetch(Sampler0, ivec2(axonMiniB.xy + floor(t)), 0);
+        if (c.a > 0.5) {
+            acc += vec4(c.rgb, 1.0);
+        }
+    }
+    if (acc.a < 0.5) {
+        return vec4(0.0);
+    }
+    return vec4(acc.rgb / acc.a, 1.0);
+}
+
+vec4 axonMiniFrame(bool front) {
+    vec2 l = axonMiniL;
+    int s = int(axonMiniA.w + 0.5);
+    bool rot = ((s >> 7) & 1) == 1;
+    vec2 f = axonMiniB.zw;
+    vec2 r = vec2(-f.y, f.x);
+    float px = max(fwidth(l.x), 1e-4);
+    if (!front) {
+        if (axonMiniOutside(l, s, AXON_MINI_PAD_F)) {
+            return vec4(0.0);
+        }
+        if (!axonMiniOutside(l, s, 0.0)) {
+            return vec4(0.075, 0.085, 0.10, 0.92);            // nieznany teren
+        }
+        bool outer = axonMiniOutside(l, s, AXON_MINI_PAD_F - 1.5 * px);
+        return vec4(outer ? vec3(0.45, 0.47, 0.52) : vec3(0.09, 0.10, 0.13), 1.0);
+    }
+    // północ: czerwony trójkąt na obwódce
+    vec2 n = rot ? vec2(dot(vec2(0.0, -1.0), r), -dot(vec2(0.0, -1.0), f)) : vec2(0.0, -1.0);
+    vec2 np = normalize(n) * (1.0 + AXON_MINI_PAD_F * 0.5);
+    if (((s >> 6) & 1) == 0 && !rot) {
+        np = vec2(0.0, -1.0 - AXON_MINI_PAD_F * 0.5);
+    }
+    vec2 q = l - np;
+    float nd = length(q);
+    if (nd < 0.075) {
+        vec3 col = nd < 0.055 ? vec3(0.9, 0.2, 0.2) : vec3(0.05);
+        return vec4(col, 1.0);
+    }
+    // gracz: strzałka (przy obrocie zawsze w górę)
+    vec2 dir = rot ? vec2(0.0, -1.0) : vec2(f.x, f.y);
+    vec2 a = vec2(dot(l, vec2(-dir.y, dir.x)), dot(l, dir)) / 0.075;
+    float tri = max(abs(a.x) * 1.25 + a.y - 1.0, -a.y - 0.75 - abs(a.x) * 0.5);
+    if (tri < 0.0) {
+        return vec4(1.0, 1.0, 1.0, 1.0);
+    }
+    if (tri < 0.28) {
+        return vec4(0.05, 0.05, 0.05, 1.0);
+    }
+    return vec4(0.0);
+}
+
+const vec3 AXON_MINI_PINS[8] = vec3[8](vec3(1.0, 0.55, 0.15), vec3(0.3, 0.85, 1.0), vec3(0.92, 0.9, 0.85),
+        vec3(0.35, 0.9, 0.5), vec3(0.35, 0.55, 1.0), vec3(0.95, 0.25, 0.25), vec3(1.0, 0.85, 0.25), vec3(0.8, 0.5, 1.0));
+
+vec4 axonMiniPin() {
+    vec2 l = axonMiniL;
+    int type = int(fract(axonMiniA.z) * 16.0 + 0.5);
+    float rr = length(l);
+    if (rr > 1.0) {
+        return vec4(0.0);
+    }
+    float alpha = axonMiniB.x > 0.5 ? 0.85 : 1.0;
+    vec3 c = AXON_MINI_PINS[type & 7];
+    if (type == 5) {
+        // miejsce śmierci: krzyżyk
+        float d = min(abs(l.x - l.y), abs(l.x + l.y));
+        if (rr < 0.8 && d < 0.28) {
+            return vec4(d < 0.16 ? c : vec3(0.05), alpha);
+        }
+        return vec4(0.0);
+    }
+    if (type == 0 || type == 2 || type == 3) {
+        // działka i struktury: kwadrat
+        float m = max(abs(l.x), abs(l.y));
+        if (m > 0.75) {
+            return vec4(0.0);
+        }
+        return vec4(m < 0.5 ? c : vec3(0.05), alpha);
+    }
+    return vec4(rr < 0.62 ? c : vec3(0.05), alpha * (rr < 0.9 ? 1.0 : 0.0));
+}
+
 void main() {
+    if (axonMiniA.z > 0.5) {
+        int k = int(axonMiniA.z);
+        if (k == 5) {
+            fragColor = axonMiniTile();
+        } else if (k == 3) {
+            fragColor = axonMiniPin();
+        } else {
+            fragColor = axonMiniFrame(k == 2);
+        }
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
     if (axonHud == 4) {
         fragColor = axonHudBar();
         if (fragColor.a < 0.004) {
