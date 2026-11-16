@@ -41,7 +41,7 @@ def row(root, name):
     d = m.get('display', {})
     w = ga.warianty(d)
     W, H = 400, 225
-    ims = [label(fp(d, q, W, H, True), name + ': biodro (kusza)', 14),
+    ims = [label(fp(dict(d, **w['biodro']), q, W, H, True), name + ': biodro (kusza)', 14),
            label(fp(dict(d, **w['cel']), q, W, H, True), 'Shift: celowanie (kusza)', 14),
            label(tp(d, q, 225, 225, True), 'poza kuszy', 14),
            label(fp(dict(d, **w['biodro_u']), q, W, H, False), 'tryb uzywanie: biodro', 14),
