@@ -37,19 +37,24 @@ uniform int FogShape;
 uniform float GameTime;
 uniform vec2 ScreenSize;
 
-out float vertexDistance;
+out vec3 axonSm;
+#define vertexDistance axonSm.x
+#define axonMiniL axonSm.yz
 out vec4 vertexColor;
 out vec2 texCoord0;
-flat out int axonMap;
-flat out int axonTile;
-flat out int axonDensity;
-flat out vec2 axonCursor;
+// Varyingi spakowane (NVIDIA: 'cannot locate suitable resource to bind variable', za dużo slotów)
+flat out ivec4 axonI;
+#define axonMap axonI.x
+#define axonTile axonI.y
+#define axonDensity axonI.z
+#define axonHud axonI.w
+flat out vec3 axonCC;
+#define axonCursor axonCC.xy
+#define axonClock axonCC.z
 flat out vec4 axonSpriteA[AXON_SPRITES];
 flat out vec4 axonSpriteB[AXON_SPRITES];
-flat out vec2 axonSpriteLim[AXON_SPRITES];
-flat out float axonClock;
+flat out vec4 axonSpriteLimP[(AXON_SPRITES + 1) / 2];
 // Panel HUD AxonScoreboard: 0 = nie, inaczej rodzaj elementu + 1 (opis przy axonHudVertex).
-flat out int axonHud;
 out vec2 axonHudLocal;
 flat out vec4 axonHudBox;
 flat out vec3 axonHudBg;
@@ -59,9 +64,12 @@ flat out vec4 axonHudAcc2;
 flat out vec4 axonHudExtra;
 flat out vec4 axonMiniA;
 flat out vec4 axonMiniB;
-out vec2 axonMiniL;
 
 // AxonMap: ekran mapy na cały ekran. Musi się zgadzać z pluginem (OverlayLayout).
+void axonSetLim(int i, vec2 v) {
+    if ((i & 1) == 0) axonSpriteLimP[i >> 1].xy = v; else axonSpriteLimP[i >> 1].zw = v;
+}
+
 #define AXON_COLS 5
 #define AXON_ROWS 3
 // Kursor: o ile stopni trzeba obrócić głowę, żeby przejechać całą szerokość / wysokość mapy.
@@ -164,7 +172,7 @@ void axonReadSprites() {
     for (int i = 0; i < AXON_SPRITES; i++) {
         axonSpriteA[i] = vec4(0.0);
         axonSpriteB[i] = vec4(0.0);
-        axonSpriteLim[i] = vec2(0.0);
+        axonSetLim(i, vec2(0.0));
     }
     if (axonNibble(0) != 10 || axonNibble(1) != 5 || axonNibble(2) != 12 || axonNibble(3) != 3) {
         return;
@@ -186,7 +194,7 @@ void axonReadSprites() {
         float stamp = float(axonNibbles(base + 13, 2));
         axonSpriteA[i] = vec4(x, y, vx, vy);
         axonSpriteB[i] = vec4(float(kind), color, size, stamp);
-        axonSpriteLim[i] = vec2(float(axonNibbles(base + 15, 3)), float(axonNibbles(base + 18, 3)));
+        axonSetLim(i, vec2(float(axonNibbles(base + 15, 3)), float(axonNibbles(base + 18, 3))));
     }
 }
 
@@ -607,7 +615,7 @@ void main() {
     for (int s = 0; s < AXON_SPRITES; s++) {
         axonSpriteA[s] = vec4(0.0);
         axonSpriteB[s] = vec4(0.0);
-        axonSpriteLim[s] = vec2(0.0);
+        axonSetLim(s, vec2(0.0));
     }
 
     if (axonHudVertex()) {
