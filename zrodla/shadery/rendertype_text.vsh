@@ -590,6 +590,101 @@ bool axonMiniVertex() {
     return true;
 }
 
+// ── Pełna mapa AxonMap po stronie klienta ───────────────────────────────────────────────────────
+// Przy otwartej mapie (czas gry w oknie AXON_HUD_TIME) teren i znaczniki pełnej mapy to znaki czcionki
+// axonmap:minimapa w dwóch niewidzialnych wyświetlaczach tekstu stojących w kamerze. Serwer zmienia tylko ich
+// przesunięcie (transformację) przy WASD, scrollu i kliknięciu, a klient płynnie je interpoluje w każdej klatce:
+//   Position.xz = kotwica - środek widoku (bloki), Position.y = 50 + 8 * log2(bloki na piksel logiczny).
+// Mapy UI (przyciski, panele, napisy) zostają na ramkach i mają wtedy przezroczyste tło.
+// Kolor znaku ma R <= 0x7F (minimapa i kompas mają R >= 0xE0):
+//   kafel terenu (alfa 250 w lewym górnym tekselu): bity = (dx + 512) << 10 | (dz + 512), dx/dz w kaflach od kotwicy
+//   znacznik (teksel 1 × 1 z alfą 249, G = 1 lub 2, B = 90): v = (G - 1) * 256 + R = rodzaj 4 | styl 5,
+//     bity = e 3 | dx + 512 (10) | dz + 512 (10), przesunięcie od kotwicy = (dx, dz) * 2^e bloków
+//   rodzaje: 0-4 punkt (romb, dom, gwiazda, krzyżyk, flaga; styl = kolor), 5 znajomy, 6 rdzeń działki, 7 śmierć,
+//   8 Ty (styl = kierunek co 11,25°), 15 tło z chmurami (bity = x mod 2048 << 11 | z mod 2048 kotwicy)
+// Musi się zgadzać z pluginem (ClientMap).
+#define AXON_FULL_Y0 50.0
+#define AXON_FULL_YOCT 8.0
+#define AXON_FULL_EDGE 14.0
+#define AXON_FULL_PIN 10.0
+
+vec4 axonFullClip(vec2 px, float z) {
+    return vec4(px.x / 320.0 - 1.0, 1.0 - px.y / 192.0, z, 1.0);
+}
+
+bool axonFullVertex() {
+    if (ProjMat[2][3] == 0.0 || !axonMapOpen(GameTime)) {
+        return false;
+    }
+    ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
+    if (c.r > 127) {
+        return false;
+    }
+    int vc = gl_VertexID % 4;
+    vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
+    vec2 atlas = vec2(textureSize(Sampler0, 0));
+    float scale = exp2((Position.y - AXON_FULL_Y0) / AXON_FULL_YOCT);
+    int bits = c.r << 16 | c.g << 8 | c.b;
+    vec2 center = vec2(320.0, 192.0);
+    vec4 tx = texelFetch(Sampler0, ivec2(floor(UV0 * atlas - cv + 0.5)), 0);
+    int g = int(tx.g * 255.0 + 0.5);
+    if (abs(tx.a * 255.0 - 249.0) < 0.5 && abs(tx.b * 255.0 - 90.0) < 0.5 && (g == 1 || g == 2)) {
+        int v = (g - 1) * 256 + int(tx.r * 255.0 + 0.5);
+        int kind = v >> 5;
+        if (kind == 15) {
+            // tło: cały ekran, chmury przyklejone do świata (fsh liczy je ze współrzędnych mod 2048)
+            vec2 anchor = vec2(float((bits >> 11) & 2047), float(bits & 2047));
+            vec2 l = cv * vec2(640.0, 384.0);
+            axonMiniA = vec4(anchor - Position.xz, 10.0, scale);
+            axonMiniL = l - center;
+            gl_Position = axonFullClip(l, -0.970);
+            vertexColor = vec4(1.0);
+            texCoord0 = UV0;
+            return true;
+        }
+        float e = float((bits >> 20) & 7);
+        vec2 d = vec2(float(((bits >> 10) & 1023) - 512), float((bits & 1023) - 512)) * exp2(e);
+        vec2 rel = (Position.xz + d) / scale;
+        vec2 dir = vec2(0.0);
+        float far = 0.0;
+        if (kind < 8) {
+            // poza ekranem: grot na krawędzi, w stronę celu
+            vec2 hl = center - AXON_FULL_EDGE;
+            if (abs(rel.x) > hl.x || abs(rel.y) > hl.y) {
+                dir = normalize(rel);
+                rel *= min(hl.x / max(abs(rel.x), 1e-4), hl.y / max(abs(rel.y), 1e-4));
+                far = 1.0;
+            }
+        }
+        vec2 l = (cv * 2.0 - 1.0) * AXON_FULL_PIN;
+        axonMiniA = vec4(float(kind), float(v & 31), 9.0, far);
+        axonMiniB = vec4(dir, 0.0, 0.0);
+        axonMiniL = l;
+        gl_Position = axonFullClip(center + rel + l, kind == 8 ? -0.984 : -0.980);
+        vertexColor = vec4(1.0);
+        texCoord0 = UV0;
+        return true;
+    }
+    ivec2 t0 = ivec2(floor(UV0 * atlas - cv * 128.0 + 0.5));
+    if (abs(texelFetch(Sampler0, t0, 0).a * 255.0 - 250.0) > 0.5) {
+        return false;
+    }
+    vec2 d = vec2(float(((bits >> 10) & 1023) - 512), float((bits & 1023) - 512)) * 128.0;
+    float size = 128.0 / scale;
+    vec2 tl = center + (Position.xz + d) / scale;
+    if (tl.x > 640.0 || tl.y > 384.0 || tl.x + size < 0.0 || tl.y + size < 0.0) {
+        gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+        return true;
+    }
+    vec2 uv0 = vec2(t0) / atlas;
+    axonMiniA = vec4(0.0, 0.0, 8.0, scale);
+    axonMiniB = vec4(uv0, uv0 + 128.0 / atlas);
+    gl_Position = axonFullClip(tl + cv * size, -0.975);
+    vertexColor = vec4(1.0);
+    texCoord0 = UV0;
+    return true;
+}
+
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     axonHud = 0;
@@ -624,6 +719,10 @@ void main() {
         }
         return;
     }
+    if (axonFullVertex()) {
+        vertexDistance = 0.0;
+        return;
+    }
     if (axonMiniVertex()) {
         if (axonMapOpen(GameTime)) {
             // minimapa i kompas chowają się przy pełnym ekranie (mapa AxonMap, warsztaty, skrzynie i inne GUI AxonOverlay)
@@ -645,6 +744,10 @@ void main() {
         axonTile = tile;
         axonDensity = axonDensityOut;
         axonReadSprites();
+        // pełna mapa po stronie klienta: przezroczysty piksel (32, 0) = mapy niosą tylko UI
+        if (texelFetch(Sampler0, ivec2(32, 0), 0).a < 0.5) {
+            axonHud = 9;
+        }
         // Kierunek kamery z ModelViewMat (świat -> widok): przód = -trzeci wiersz macierzy.
         vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
         float yaw = degrees(atan(-forward.x, forward.z));
