@@ -429,6 +429,79 @@ vec2 axonMiniFacing() {
     return length(f) > 1e-4 ? normalize(f) : vec2(0.0, 1.0);
 }
 
+// ── Kompas AxonMap ───────────────────────────────────────────────────────────────────────────────
+// Pasek kompasu u góry ekranu. Znaki to te same znaczniki 1 × 1 (alfa 249) co ramka minimapy, ale kolor ma R od 0xF0:
+//   teksel: R = ustawienia kompasu: rozmiar 2 | zakres 1 (0 = 180°, 1 = 120°) | wolny 1 | wykładnik 4
+//   wykładnik 15 to pasek; inaczej cel: R = F | bez napisu 1 | rodzaj znacznika minimapy 3,
+//   G = dx + 128, B = dz + 128, przesunięcie od kotwicy = (dx, dz) × 2^wykładnik bloków
+// Kierunek kamery i położenie celu względem kamery shader liczy w każdej klatce, więc pasek obraca się płynnie.
+const float AXON_COMPASS_W[3] = float[3](0.34, 0.44, 0.56);
+const float AXON_COMPASS_H[3] = float[3](0.026, 0.032, 0.040);
+
+// Kierunek jak w grach: 0 = północ (-Z), 90 = wschód (+X).
+float axonHeading(vec2 d) {
+    return degrees(atan(d.x, -d.y));
+}
+
+bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
+    ivec2 t1 = ivec2(floor(UV0 * atlas - cv + 0.5));
+    vec4 tx = texelFetch(Sampler0, t1, 0);
+    if (abs(tx.a * 255.0 - 249.0) > 0.5) {
+        return false;
+    }
+    int s = int(tx.r * 255.0 + 0.5);
+    int e = (s >> 4) & 15;
+    int size = min(s & 3, 2);
+    float span = ((s >> 2) & 1) == 1 ? 120.0 : 180.0;
+    float unit = ScreenSize.y;
+    float halfW = min(floor(AXON_COMPASS_W[size] * unit * 0.5), floor(ScreenSize.x * 0.46));
+    float bh = floor(AXON_COMPASS_H[size] * unit);
+    float gp = max(1.0, floor(bh * 0.45 / 7.0 + 0.5));
+    vec2 top = vec2(floor(ScreenSize.x * 0.5), floor(0.012 * unit) + 1.0);
+    float heading = axonHeading(f);
+    vec2 l;
+    if (e == 15) {
+        // pasek: od lewej do prawej krawędzi, pod nim okienko z kierunkiem w stopniach
+        vec2 lo = vec2(-halfW - 2.0, -2.0);
+        vec2 hi = vec2(halfW + 2.0, bh + 13.0 * gp + 2.0);
+        l = mix(lo, hi, cv);
+        axonMiniA = vec4(heading, span, 6.0, float(s));
+        axonMiniB = vec4(halfW, bh, gp, 0.0);
+        gl_Position = axonMiniClip(top + l, -0.986);
+    } else {
+        vec2 rel = vec2(float(c.g - 128), float(c.b - 128)) * exp2(float(e)) + Position.xz;
+        float dist = length(rel);
+        float d = mod(axonHeading(rel) - heading + 540.0, 360.0) - 180.0;
+        float x = d / (span * 0.5) * halfW;
+        float ih = floor(bh * 0.36);
+        float lim = halfW - ih - 3.0;
+        float side = 0.0;
+        if (abs(x) > lim) {
+            side = sign(x);
+            x = side * lim;
+        }
+        // pod paskiem odległość (do 4 znaków po 6 pikseli czcionki); przy środku zjeżdża pod okienko stopni
+        float label = float((c.r >> 3) & 1);
+        if (label < 0.5 && abs(x) < 29.0 * gp) {
+            label = 2.0;
+        }
+        float qx = max(ih, 14.0 * gp) + 2.0;
+        vec2 lo = vec2(-qx, -ih - 2.0);
+        vec2 hi = vec2(qx, bh * 0.5 + 25.0 * gp + 2.0);
+        l = mix(lo, hi, cv);
+        axonMiniA = vec4(dist, side, 7.0 + float(c.r & 7) / 16.0, float(s));
+        axonMiniB = vec4(ih, gp, bh * 0.5, label);
+        // bliższy cel leży wyżej, więc przy nachodzących znacznikach widać jego odległość
+        float z = -0.9880 - 0.0009 * (1.0 - dist / (dist + 200.0));
+        gl_Position = dist < 2.5 ? vec4(-10.0, -10.0, -10.0, 1.0)
+                : axonMiniClip(top + vec2(x, bh * 0.5) + l, z);
+    }
+    axonMiniL = l;
+    vertexColor = vec4(1.0);
+    texCoord0 = UV0;
+    return true;
+}
+
 bool axonMiniVertex() {
     if (ProjMat[2][3] == 0.0) {
         return false;
@@ -446,6 +519,10 @@ bool axonMiniVertex() {
     float z;
     vec2 l;
     if (kind == 15) {
+        // znak kompasu (teksel 1 × 1 z alfą 249) albo kafel terenu (128 × 128, alfa 250 w lewym górnym tekselu)
+        if (axonCompassVertex(c, cv, atlas, f)) {
+            return true;
+        }
         ivec2 t0 = ivec2(floor(UV0 * atlas - cv * 128.0 + 0.5));
         if (abs(texelFetch(Sampler0, t0, 0).a * 255.0 - 250.0) > 0.5) {
             return false;

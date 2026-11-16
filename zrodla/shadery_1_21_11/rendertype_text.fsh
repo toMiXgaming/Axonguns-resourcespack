@@ -691,14 +691,10 @@ float axonMiniPinShape(vec2 l, int type) {
     return min(circle, cone);
 }
 
-vec4 axonMiniPin() {
-    vec2 l = axonMiniL;
-    int type = int(fract(axonMiniA.z) * 16.0 + 0.5) & 7;
-    float px = max(fwidth(l.x), 1e-3);
+// Znacznik w układzie l (-1..1 to rozmiar znacznika); grot zamiast znacznika, gdy cel jest poza mapą lub kompasem.
+vec4 axonPinAt(vec2 l, int type, bool far, vec2 dir, float px) {
     vec3 c = AXON_MINI_PINS[type];
-    if (axonMiniB.x > 0.5) {
-        // poza mapą: grot na krawędzi wskazujący kierunek
-        vec2 dir = vec2(cos(axonMiniB.y), sin(axonMiniB.y));
+    if (far) {
         vec2 a = vec2(dot(l, vec2(-dir.y, dir.x)), dot(l, dir)) / 0.7;
         float apx = px / 0.7;
         float t = max(abs(a.x) * 1.9 + a.y - 0.8, -a.y - 0.6);
@@ -723,6 +719,179 @@ vec4 axonMiniPin() {
     return axonMiniOver(shape, o);
 }
 
+vec4 axonMiniPin() {
+    vec2 l = axonMiniL;
+    int type = int(fract(axonMiniA.z) * 16.0 + 0.5) & 7;
+    float px = max(fwidth(l.x), 1e-3);
+    return axonPinAt(l, type, axonMiniB.x > 0.5, vec2(cos(axonMiniB.y), sin(axonMiniB.y)), px);
+}
+
+// ── Kompas AxonMap (opis w rendertype_text.vsh) ─────────────────────────────────────────────────
+// Czcionka 5 × 7: 0–9, N, E, S, W, m, k, kropka, stopień. Wiersz = 5 bitów, bit 4 to lewa kolumna.
+const int AXON_FONT[126] = int[126](
+    14, 17, 19, 21, 25, 17, 14,     4, 12, 4, 4, 4, 4, 14,          14, 17, 1, 2, 4, 8, 31,
+    31, 2, 4, 2, 1, 17, 14,         2, 6, 10, 18, 31, 2, 2,         31, 16, 30, 1, 1, 17, 14,
+    6, 8, 16, 30, 17, 17, 14,       31, 1, 2, 4, 8, 8, 8,           14, 17, 17, 14, 17, 17, 14,
+    14, 17, 17, 15, 1, 2, 12,       17, 25, 21, 19, 17, 17, 17,     31, 16, 16, 30, 16, 16, 31,
+    15, 16, 16, 14, 1, 1, 30,       17, 17, 17, 21, 21, 21, 10,     0, 0, 26, 21, 21, 17, 17,
+    16, 16, 18, 20, 24, 20, 18,     0, 0, 0, 0, 0, 12, 12,          12, 18, 18, 12, 0, 0, 0);
+#define AXON_CH_N 10
+#define AXON_CH_E 11
+#define AXON_CH_S 12
+#define AXON_CH_W 13
+#define AXON_CH_M 14
+#define AXON_CH_K 15
+#define AXON_CH_DOT 16
+#define AXON_CH_DEG 17
+
+// Pokrycie piksela przez znak (lewy górny róg w origin, piksel czcionki gp): 4 próbki, więc znak przesuwa się gładko.
+float axonGlyph(vec2 p, vec2 origin, float gp, int ch) {
+    float acc = 0.0;
+    for (int i = 0; i < 4; i++) {
+        vec2 o = vec2(i == 0 || i == 2 ? -0.25 : 0.25, i < 2 ? -0.25 : 0.25);
+        vec2 g = (p + o - origin) / gp;
+        if (g.x < 0.0 || g.y < 0.0 || g.x >= 5.0 || g.y >= 7.0) {
+            continue;
+        }
+        ivec2 cell = ivec2(floor(g));
+        acc += float((AXON_FONT[ch * 7 + cell.y] >> (4 - cell.x)) & 1);
+    }
+    return acc * 0.25;
+}
+
+// Napis do 5 znaków wyśrodkowany na cx, górą na y.
+float axonText(vec2 p, float cx, float y, float gp, int n, int c0, int c1, int c2, int c3, int c4) {
+    float w = float(n) * 6.0 * gp - gp;
+    float x0 = cx - w * 0.5;
+    int i = int(floor((p.x - x0) / (6.0 * gp)));
+    float best = 0.0;
+    // próbki mogą wejść w sąsiedni znak, więc sprawdzamy też obok
+    for (int k = -1; k <= 1; k++) {
+        int j = i + k;
+        if (j < 0 || j >= n) {
+            continue;
+        }
+        int ch = j == 0 ? c0 : j == 1 ? c1 : j == 2 ? c2 : j == 3 ? c3 : c4;
+        best = max(best, axonGlyph(p, vec2(x0 + float(j) * 6.0 * gp, y), gp, ch));
+    }
+    return best;
+}
+
+// Odległość jako 12m, 345m, 1.2k, 15k.
+float axonDistanceText(vec2 p, float cx, float y, float gp, float dist) {
+    if (dist < 999.5) {
+        int m = int(dist + 0.5);
+        if (m < 10) {
+            return axonText(p, cx, y, gp, 2, m, AXON_CH_M, 0, 0, 0);
+        }
+        if (m < 100) {
+            return axonText(p, cx, y, gp, 3, m / 10, m % 10, AXON_CH_M, 0, 0);
+        }
+        return axonText(p, cx, y, gp, 4, m / 100, (m / 10) % 10, m % 10, AXON_CH_M, 0);
+    }
+    if (dist < 9950.0) {
+        int t = int(dist / 100.0 + 0.5);
+        return axonText(p, cx, y, gp, 4, t / 10, AXON_CH_DOT, t % 10, AXON_CH_K, 0);
+    }
+    int k = min(int(dist / 1000.0 + 0.5), 99);
+    return axonText(p, cx, y, gp, 3, k / 10, k % 10, AXON_CH_K, 0, 0);
+}
+
+const int AXON_DIRS[16] = int[16](AXON_CH_N, -1, AXON_CH_N, AXON_CH_E, AXON_CH_E, -1, AXON_CH_S, AXON_CH_E,
+        AXON_CH_S, -1, AXON_CH_S, AXON_CH_W, AXON_CH_W, -1, AXON_CH_N, AXON_CH_W);
+
+vec4 axonCompassBar() {
+    vec2 p = axonMiniL;
+    float heading = axonMiniA.x;
+    float span = axonMiniA.y;
+    float halfW = axonMiniB.x;
+    float bh = axonMiniB.y;
+    float gp = axonMiniB.z;
+    float ppd = halfW / (span * 0.5);
+    // końce paska gasną, środek jest pełny
+    float fade = 1.0 - smoothstep(halfW * 0.72, halfW, abs(p.x));
+    float r = floor(bh * 0.3);
+    float d = axonRoundBox(p - vec2(0.0, bh * 0.5), vec2(halfW, bh * 0.5), r);
+    float inside = 1.0 - smoothstep(-0.5, 0.5, d);
+    vec3 band = mix(vec3(0.16, 0.17, 0.21), vec3(0.07, 0.08, 0.10), clamp(p.y / bh, 0.0, 1.0));
+    vec4 o = vec4(band, 0.82 * inside * mix(0.15, 1.0, fade));
+    // złota linia na dole paska
+    float gold = step(bh - 1.5, p.y) * step(p.y, bh - 0.5) * step(abs(p.x), halfW - r);
+    o = axonMiniOver(vec4(0.86, 0.69, 0.33, 0.9 * gold * fade), o);
+    if (inside > 0.0) {
+        float a = heading + p.x / ppd;
+        // kreski co 5° (dłuższe co 15°), litery co 45°
+        float t = a / 5.0;
+        float idx = mod(floor(t + 0.5), 72.0);
+        float dpx = abs(t - floor(t + 0.5)) * 5.0 * ppd;
+        if (mod(idx, 9.0) > 0.5) {
+            bool major = mod(idx, 3.0) < 0.5;
+            float len = (major ? 0.3 : 0.16) * bh;
+            float y1 = bh - 0.14 * bh;
+            float cov = clamp(1.0 - dpx, 0.0, 1.0) * step(y1 - len, p.y) * step(p.y, y1);
+            o = axonMiniOver(vec4(vec3(major ? 0.78 : 0.5), cov * fade), o);
+        }
+        float k = floor(a / 45.0 + 0.5);
+        int dir = int(mod(k, 8.0));
+        float lx = p.x + (k * 45.0 - a) * ppd;
+        float cy = bh * 0.42;
+        float cov;
+        vec3 col;
+        if ((dir & 1) == 0) {
+            int ch = AXON_DIRS[dir * 2];
+            cov = axonText(p, lx, cy - 3.5 * gp, gp, 1, ch, 0, 0, 0, 0);
+            col = dir == 0 ? vec3(1.0, 0.33, 0.28) : vec3(1.0);
+        } else {
+            float g2 = gp * 0.75;
+            cov = axonText(p, lx, cy - 3.5 * g2, g2, 2, AXON_DIRS[dir * 2], AXON_DIRS[dir * 2 + 1], 0, 0, 0);
+            col = vec3(0.72, 0.74, 0.78);
+        }
+        o = axonMiniOver(vec4(col, cov * fade), o);
+        // środek: złoty grot u góry
+        float tri = max(abs(p.x) / (0.2 * bh) + p.y / (0.24 * bh) - 1.0, -p.y);
+        o = axonMiniOver(vec4(0.95, 0.78, 0.38, 1.0 - smoothstep(-0.04, 0.04, tri)), o);
+    }
+    // okienko z kierunkiem w stopniach pod środkiem paska
+    int deg = int(mod(floor(heading + 0.5), 360.0));
+    int n = deg >= 100 ? 3 : deg >= 10 ? 2 : 1;
+    float w = float(n + 1) * 6.0 * gp + 4.0 * gp;
+    float y0 = bh + 2.0 * gp;
+    float pill = axonRoundBox(p - vec2(0.0, y0 + 5.5 * gp), vec2(w * 0.5, 5.5 * gp), 2.0 * gp);
+    float pc = 1.0 - smoothstep(-0.5, 0.5, pill);
+    o = axonMiniOver(vec4(0.07, 0.08, 0.10, 0.8 * pc), o);
+    float ty = y0 + 2.0 * gp;
+    float tc = n == 3 ? axonText(p, 0.0, ty, gp, 4, deg / 100, (deg / 10) % 10, deg % 10, AXON_CH_DEG, 0)
+            : n == 2 ? axonText(p, 0.0, ty, gp, 3, deg / 10, deg % 10, AXON_CH_DEG, 0, 0)
+            : axonText(p, 0.0, ty, gp, 2, deg, AXON_CH_DEG, 0, 0, 0);
+    o = axonMiniOver(vec4(vec3(0.95, 0.9, 0.78), tc), o);
+    return o;
+}
+
+vec4 axonCompassMarker() {
+    vec2 p = axonMiniL;
+    float dist = axonMiniA.x;
+    float side = axonMiniA.y;
+    int type = int(fract(axonMiniA.z) * 16.0 + 0.5) & 7;
+    float ih = axonMiniB.x;
+    float gp = axonMiniB.y;
+    float half_ = axonMiniB.z;
+    vec4 o = vec4(0.0);
+    if (abs(side) < 0.5 && (axonMiniB.w < 0.5 || axonMiniB.w > 1.5)) {
+        // odległość pod paskiem (serwer zostawia napis tylko najbliższemu z celów leżących obok siebie),
+        // przy środku paska rząd niżej, pod okienkiem stopni
+        float y0 = half_ + 2.0 * gp + (axonMiniB.w > 1.5 ? 12.0 * gp : 0.0);
+        int n = dist < 9.5 ? 2 : dist < 99.5 ? 3 : dist < 9950.0 ? 4 : 3;
+        float w = float(n) * 6.0 * gp + 4.0 * gp;
+        float bg = axonRoundBox(p - vec2(0.0, y0 + 5.5 * gp), vec2(w * 0.5, 5.5 * gp), 2.0 * gp);
+        o = axonMiniOver(vec4(0.05, 0.06, 0.08, 0.96 * (1.0 - smoothstep(-0.5, 0.5, bg))), o);
+        float tc = axonDistanceText(p, 0.0, y0 + 2.0 * gp, gp, dist);
+        o = axonMiniOver(vec4(mix(vec3(1.0), AXON_MINI_PINS[type], 0.35), tc), o);
+    }
+    vec2 l = p / max(ih, 1.0);
+    o = axonMiniOver(axonPinAt(l, type, abs(side) > 0.5, vec2(side, 0.0), 1.0 / max(ih, 1.0)), o);
+    return o;
+}
+
 void main() {
     if (axonMiniA.z > 0.5) {
         int k = int(axonMiniA.z);
@@ -730,6 +899,10 @@ void main() {
             fragColor = axonMiniTile();
         } else if (k == 3) {
             fragColor = axonMiniPin();
+        } else if (k == 6) {
+            fragColor = axonCompassBar();
+        } else if (k == 7) {
+            fragColor = axonCompassMarker();
         } else {
             fragColor = axonMiniFrame(k == 2);
         }

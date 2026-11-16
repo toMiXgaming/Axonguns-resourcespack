@@ -134,6 +134,14 @@ Ten sam shader rysuje pełnoekranowe GUI AxonCore (warsztaty, mini gry, skrzynie
 `rendertype_text` (oba zestawy: `zrodla/shadery/` i `zrodla/shadery_1_21_11/`, część „Minimapa AxonMap”) rysuje też minimapę z pluginu AxonMap. Teren nie jest w tej paczce: plugin po każdym wipe buduje osobną małą paczkę z kaflami mapy (czcionka `axonmap:minimapa`) i wysyła ją graczom nad tą paczką. Tutaj jest tylko shader.
 
 Plugin stawia przy graczu niewidzialny wyświetlacz tekstu ze znakami tej czcionki. Shader rozpoznaje je po kolorze (R od 0xE0) i alfie tekstury (250 kafel terenu, 249 ramka i znaczniki), a z położenia wierzchołka względem kamery liczy pozycję i obrót kamery w każdej klatce, więc mapa w rogu ekranu przesuwa się i obraca płynnie. Kolor znaku niesie ustawienia gracza (róg, rozmiar, zasięg, kwadrat/koło, obrót) i położenie kafla albo znacznika. Bez paczki z pluginu shader nic nie rysuje, a zwykły tekst w świecie wygląda jak wcześniej.
+
+### Kompas AxonMap
+
+Ten sam `rendertype_text` (część „Kompas AxonMap”, oba zestawy shaderów) rysuje płynny kompas u góry ekranu: ciemny pasek z kreskami co 5°, literami stron świata (N na czerwono), złotym grotem na środku i okienkiem z kierunkiem w stopniach (0° = północ, 90° = wschód), a na pasku znaczniki celów (działka, osoby z działki, najbliższa struktura, punkty, miejsce śmierci) z odległością pod spodem. Cel poza paskiem to grot na jego końcu.
+
+Znaki kompasu stoją w tym samym niewidzialnym wyświetlaczu tekstu co znaczniki minimapy (czcionka `axonmap:minimapa` z paczki pluginu, znaki 1 × 1 z alfą 249). Shader rozpoznaje je po kolorze z R od 0xF0 przy alfie 249: teksel niesie ustawienia (rozmiar, zakres 180°/120°) i wykładnik, a wykładnik 15 oznacza sam pasek. Cel ma w kolorze rodzaj, bit „bez napisu” i przesunięcie od kotwicy (G, B) razy 2^wykładnik bloków, więc mieści też cele oddalone o tysiące bloków. Kierunek kamery i położenie celu względem kamery shader liczy w każdej klatce, więc kompas obraca się płynnie niezależnie od TPS i pingu. Pasek ma szerokość 34/44/56% wysokości ekranu (nie zależy od skali GUI) i stoi na środku u góry, gdzie normalnie są bossbary.
+
+Sprawdzone w prawdziwym kliencie 1.21.4 i 1.21.11 (obrót myszą, znaczniki, odległości, cele poza paskiem).
 ## Reaktor działki (AxonPlot)
 
 Rdzeń działki z [AxonPlot](https://github.com/toMiXgaming/AXONPLOT) wygląda jak reaktor. Plugin stawia na bloku rdzenia ItemDisplay z przedmiotem `crying_obsidian` i `custom_model_data`, a `assets/minecraft/items/crying_obsidian.json` wybiera po tej liczbie model z `assets/axon/`. Zwykły crying obsidian (bez liczby) wygląda jak w vanilli.
