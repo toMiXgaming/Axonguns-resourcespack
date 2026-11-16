@@ -19,7 +19,9 @@ def patch(path, files):
     names = set(zin.namelist())
     if not any(n.startswith('axon_1_21_0/') for n in names):
         files = {k: v for k, v in files.items() if not k.startswith('axon_1_21_0/')}
-    entries = [(i, zin.read(i.filename)) for i in zin.infolist() if i.filename not in files]
+    # stare czcionki panelu HUD (hud_t, hud_0…) zastąpiła jedna axon:hud
+    stale = lambda n: n.startswith('assets/axon/font/hud_') and n.endswith('.json')
+    entries = [(i, zin.read(i.filename)) for i in zin.infolist() if i.filename not in files and not stale(i.filename)]
     zin.close()
     with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zout:
         for info, data in entries:

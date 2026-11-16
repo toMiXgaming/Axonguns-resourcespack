@@ -361,6 +361,35 @@ Listy znaków: `zrodla/axoncore/maly_znaki.json` (kopia z 1.21.4). Tło do barwi
 Od AxonScoreboard 1.3 panel ma też tło do barwienia skinem (U+EA60–U+EA68: nagłówek, wiersz i stopka
 w trzech poziomach przezroczystości), ozdobę nagłówka (U+EA69) i wzór wierszy (U+EA6A) dla skinów VIP i Elity.
 
+### Panel HUD (AxonScoreboard 1.6)
+
+Druga odmiana tablicy: zaokrąglony panel w wybranym rogu ekranu i w wybranej skali, zamiast sidebara po prawej.
+Plugin wysyła panel jako tytuły **dwóch różowych bossbarów**: w pierwszym jest tło (znaczniki), w drugim tekst
+(pasek różowego bossbara jest w paczce przezroczysty: `textures/gui/sprites/boss_bar/pink_*.png`). Shader
+`rendertype_text` przenosi oba do rogu. Dwie warstwy są potrzebne, bo 1.21.6+ nie ma w GUI głębi i w obrębie jednego
+napisu układa znaki według tekstury; osobny napis, który nachodzi na poprzedni, rysuje nad nim. Bossbar z tekstem leży
+19 px niżej, co shader odejmuje.
+
+- jedna czcionka `axon:hud`: znak to `U+F0000 + wiersz·0x1000 + numer znaku` (lista w `hud_znaki.txt` pluginu);
+  wiersz 0 to tytuł i baner, wiersz k+1 to linia k (18 + 9k px niżej), 24 linie na panel i powiadomienia,
+- kolor znaku to znacznik, R/16 to rodzaj: 64–79 tekst panelu, 80–95 tło, 96–111 linia oddzielająca, 112–127 pasek,
+  128–143 powiadomienie, 144–159 tekst banera, 160–175 pas banera, 176–191 pasek czasu powiadomienia;
+  młodsze 4 bity R to róg i skala. Kolor tekstu jest w G i B (RGB 4-4-4) z 4 bitami sumy kontrolnej, więc zwykłe napisy
+  (tytuły okien itd.) nie są ruszane,
+- tło to znak skinu U+E100 + numer (grafit, lód, szmaragd, ametyst, korona, zorza): kafel 2×2 z kolorami tła, nagłówka
+  i akcentów (alfa 253 w tle to znak rozpoznawczy), 1024 × 1024 px, z którego shader rysuje panel z zaokrągleniem,
+  cieniem, nagłówkiem, paskiem akcentu i lśnieniem skinów Elity,
+- efekty: paski rysowane gładko z gradientem i przesuwającym się połyskiem, pulsująca czerwona obwódka w rajdzie
+  i ataku, wysuwane powiadomienia z pionowym paskiem czasu, baner na środku ekranu z pasem, który gaśnie sam.
+  Czas liczy shader z zegara gry (tick startu jest w znaczniku), więc animacje są płynne bez pakietów co klatkę,
+- symbole spoza bitmap vanilli, których używa plugin (strzałki ⬆⬈➡…, ✖ ♛ ✈ ✦ ✪ ⛁ ✚ ▂ ▆), są w czcionce HUD jako bitmapy
+  z GNU Unifont 16 (SIL OFL 1.1), żeby przesuwały się razem z linią.
+
+Sprawdzone w prawdziwym kliencie 1.21.4 i 1.21.11 (panel, paski, alarm, powiadomienia, baner; napisy w ekwipunku bez
+zmian). Generator: `zrodla/axoncore/hud.py` (woła go `tablica.pliki()`).
+Uwagi: każdy inny różowy bossbar na serwerze też nie będzie miał paska (sam napis zostaje). Bossbar innego pluginu,
+który pokaże się przed naszymi, przesuwa panel o 19 px w dół.
+
 ## Wgranie na serwer
 
 Repo musi być **publiczne**, inaczej gracze nie pobiorą paczki. W `plugins/QualityArmory/config.yml`:
