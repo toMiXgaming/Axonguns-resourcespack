@@ -779,12 +779,10 @@ void main() {
         return;
     }
     if (axonMap == 1) {
-        // Mapa AxonMap: bez światła i mgły. Ostry ekran (gęstość 2) skalujemy gładko, zwykły jak dotąd.
-        if (axonDensity > 1) {
-            fragColor = vec4(axonSharp(texCoord0), 1.0);
-        } else {
-            fragColor = vec4(axonTexel(ivec2(texCoord0 * 128.0)), 1.0);
-        }
+        // Mapa AxonMap: bez światła i mgły.
+        // Obie gęstości skalujemy gładko: 384 wiersze mapy na 1080 px ekranu to 2,81 px na piksel,
+        // a bez tego część wierszy ma 2 px, część 3 px i litery wychodzą nierówne.
+        fragColor = vec4(axonSharp(texCoord0), 1.0);
 
         // Sprity i kursor są w pikselach logicznych ekranu 640x384, niezależnie od gęstości siatki.
         int cols = AXON_COLS * axonDensity;
