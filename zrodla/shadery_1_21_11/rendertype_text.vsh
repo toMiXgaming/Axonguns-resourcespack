@@ -240,7 +240,7 @@ bool axonIsXpText() {
 #define AXON_HUD_MARGIN 4.0
 #define AXON_MARKER 1024.0   // znaczniki (kafel skinu) mają 1024 × 1024 px GUI, żeby 1.21.6+ rysował tekst nad nimi
 #define AXON_LAYER_DY 19.0
-const float AXON_HUD_SCALES[4] = float[4](0.75, 1.0, 1.25, 1.5);
+const float AXON_HUD_SCALES[4] = float[4](0.5, 0.75, 1.0, 1.25);
 const float AXON_BANNER_SCALES[4] = float[4](1.5, 2.0, 2.5, 3.0);
 const float AXON_TOAST_TICKS[8] = float[8](40.0, 60.0, 80.0, 100.0, 120.0, 160.0, 200.0, 240.0);
 
@@ -481,9 +481,9 @@ bool axonMiniVertex() {
                 far = true;
             }
             axonMiniA = vec4(p, 3.0 + float((c.r >> 1) & 7) / 16.0, float(s));
-            axonMiniB.xy = vec2(far ? 1.0 : 0.0, 0.0);
+            axonMiniB.xy = vec2(far ? 1.0 : 0.0, atan(p.y, p.x));   // kierunek grota dla znacznika poza mapą
             vec4 rect = axonMiniRect(s);
-            float ps = max(4.0, floor(rect.z * 0.09));
+            float ps = max(5.0, floor(rect.z * 0.1));
             l = cv * 2.0 - 1.0;
             gl_Position = axonMiniClip(rect.xy + p * rect.z + l * ps, -0.995);
             axonMiniL = l;
