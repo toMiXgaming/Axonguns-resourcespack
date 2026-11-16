@@ -52,5 +52,13 @@ void main() {
     if (ProjMat[2][3] == 0.0 && axonMapOpen(GameTime)) {
         axonGui = axonGuiPos(gl_Position, ProjMat);
         axonHide = 1;
+        // Nakładki na cały ekran (winieta, dynia, śnieg, portal) mają wierzchołki w rogach ekranu.
+        // Chowamy je całe: inaczej mapa ciemnieje przy krawędziach, a przy hotbarze zostaje jasny prostokąt.
+        vec2 size = axonGuiSize(ProjMat);
+        bool cornerX = axonGui.x <= 0.01 || axonGui.x >= size.x - 0.01;
+        bool cornerY = axonGui.y <= 0.01 || axonGui.y >= size.y - 0.01;
+        if (cornerX && cornerY) {
+            gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+        }
     }
 }

@@ -32,6 +32,9 @@ flat in vec3 axonHudHead;
 flat in vec3 axonHudAcc;
 flat in vec4 axonHudAcc2;
 flat in vec4 axonHudExtra;
+flat in vec4 axonMiniA;
+flat in vec4 axonMiniB;
+in vec2 axonMiniL;
 
 out vec4 fragColor;
 
@@ -519,7 +522,222 @@ vec4 axonHudBanner() {
     return o;
 }
 
+const float AXON_MINI_RANGE[4] = float[4](32.0, 64.0, 96.0, 128.0);
+const float AXON_MINI_PAD_F = 0.07;
+// ── Minimapa AxonMap (opis w rendertype_text.vsh) ───────────────────────────────────────────────
+// Odległość od brzegu mapy (ujemna w środku), w jednostkach połowy boku. Kwadrat ma zaokrąglone rogi.
+float axonMiniEdge(vec2 l, int s) {
+    if (((s >> 6) & 1) == 1) {
+        return length(l) - 1.0;
+    }
+    vec2 q = abs(l) - vec2(1.0 - 0.08);
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 0.08;
+}
+
+bool axonMiniOutside(vec2 l, int s, float grow) {
+    return axonMiniEdge(l, s) > grow;
+}
+
+vec4 axonMiniTile() {
+    vec2 l = axonMiniL;
+    int s = int(axonMiniA.w + 0.5);
+    if (axonMiniOutside(l, s, 0.0)) {
+        return vec4(0.0);
+    }
+    float range = AXON_MINI_RANGE[(s >> 4) & 3];
+    vec2 f = axonMiniB.zw;
+    vec2 r = vec2(-f.y, f.x);
+    // cztery próbki na piksel: przy oddaleniu teren nie migocze
+    vec2 dl = vec2(dFdx(l.x), dFdy(l.y)) * 0.25;
+    vec4 acc = vec4(0.0);
+    for (int i = 0; i < 4; i++) {
+        vec2 ll = l + vec2(i == 0 || i == 2 ? -dl.x : dl.x, i < 2 ? -dl.y : dl.y);
+        vec2 off = ((s >> 7) & 1) == 1 ? (r * ll.x - f * ll.y) * range : ll * range;
+        vec2 t = axonMiniA.xy + off;
+        if (t.x < 0.0 || t.y < 0.0 || t.x >= 128.0 || t.y >= 128.0) {
+            continue;
+        }
+        vec4 c = texelFetch(Sampler0, ivec2(axonMiniB.xy + floor(t)), 0);
+        if (c.a > 0.5) {
+            acc += vec4(c.rgb, 1.0);
+        }
+    }
+    if (acc.a < 0.5) {
+        return vec4(0.0);
+    }
+    // kolory mapy vanilli są przygaszone: trochę więcej nasycenia i jasności
+    vec3 c = acc.rgb / acc.a;
+    float g = dot(c, vec3(0.299, 0.587, 0.114));
+    c = clamp(mix(vec3(g), c, 1.18) * 1.06, 0.0, 1.0);
+    return vec4(c, 1.0);
+}
+
+// Litera N (wysokość 1.2, szerokość 1.0) jako trzy kreski; zwraca odległość od kreski.
+float axonMiniSeg(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+}
+
+float axonMiniLetterN(vec2 p) {
+    float d = axonMiniSeg(p, vec2(-0.45, 0.6), vec2(-0.45, -0.6));
+    d = min(d, axonMiniSeg(p, vec2(-0.45, -0.6), vec2(0.45, 0.6)));
+    return min(d, axonMiniSeg(p, vec2(0.45, 0.6), vec2(0.45, -0.6)));
+}
+
+// Strzałka gracza w układzie (bok, przód): ujemna w środku.
+float axonMiniArrow(vec2 a) {
+    return max(abs(a.x) * 1.3 + a.y - 1.0, -a.y - 0.7 - abs(a.x) * 0.45);
+}
+
+vec4 axonMiniOver(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    return a < 1e-4 ? vec4(0.0) : vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+
+vec4 axonMiniFrame(bool front) {
+    vec2 l = axonMiniL;
+    int s = int(axonMiniA.w + 0.5);
+    bool rot = ((s >> 7) & 1) == 1;
+    vec2 f = axonMiniB.zw;
+    vec2 r = vec2(-f.y, f.x);
+    float px = max(fwidth(l.x), 1e-4);
+    float d = axonMiniEdge(l, s);
+    float pad = AXON_MINI_PAD_F;
+    if (!front) {
+        float outer = 1.0 - smoothstep(pad - 1.5 * px, pad - 0.5 * px, d);
+        if (outer <= 0.0) {
+            return vec4(0.0);
+        }
+        if (d < 0.0) {
+            // nieznany teren: ciemne tło w delikatne ukośne paski
+            float stripe = step(0.5, fract((l.x + l.y) * 9.0));
+            return vec4(mix(vec3(0.075, 0.085, 0.105), vec3(0.095, 0.105, 0.125), stripe), 0.94);
+        }
+        // obwódka: ciemny pas z jaśniejszą górą, złota linia na zewnątrz, czarna przy mapie
+        vec3 band = mix(vec3(0.17, 0.18, 0.22), vec3(0.09, 0.10, 0.12), clamp(l.y * 0.5 + 0.5, 0.0, 1.0));
+        float gold = smoothstep(pad - 3.0 * px, pad - 2.0 * px, d) * (1.0 - smoothstep(pad - 1.6 * px, pad - 0.8 * px, d));
+        vec3 col = mix(band, vec3(0.86, 0.69, 0.33), gold);
+        col = mix(vec3(0.02, 0.02, 0.03), col, smoothstep(0.6 * px, 1.6 * px, d));
+        return vec4(col, outer);
+    }
+    vec4 o = vec4(0.0);
+    // cień wewnętrzny przy brzegu mapy
+    if (d < 0.0) {
+        o = vec4(0.0, 0.0, 0.0, 0.32 * (1.0 - smoothstep(0.0, 0.09, -d)));
+    }
+    // gracz: strzałka z cieniem (przy obrocie zawsze w górę)
+    vec2 dir = rot ? vec2(0.0, -1.0) : vec2(f.x, f.y);
+    vec2 side = vec2(-dir.y, dir.x);
+    float k = 0.085;
+    vec2 a = vec2(dot(l, side), dot(l, dir)) / k;
+    vec2 sh = l - vec2(0.012, 0.02);
+    vec2 as = vec2(dot(sh, side), dot(sh, dir)) / k;
+    float apx = px / k;
+    float ds = axonMiniArrow(as);
+    o = axonMiniOver(vec4(0.0, 0.0, 0.0, 0.45 * (1.0 - smoothstep(-apx, apx * 2.0, ds))), o);
+    float da = axonMiniArrow(a);
+    float body = 1.0 - smoothstep(-apx, apx, da + 0.22);
+    float rim = 1.0 - smoothstep(-apx, apx, da);
+    vec3 ac = mix(vec3(0.05, 0.06, 0.08), mix(vec3(0.82, 0.86, 0.92), vec3(1.0), step(0.0, dot(a, vec2(1.0, 0.0)))), body);
+    o = axonMiniOver(vec4(ac, rim), o);
+    // północ: czerwone kółko z literą N na obwódce
+    vec2 n = rot ? vec2(dot(vec2(0.0, -1.0), r), -dot(vec2(0.0, -1.0), f)) : vec2(0.0, -1.0);
+    vec2 np;
+    if (((s >> 6) & 1) == 1 || rot) {
+        np = normalize(n) * (1.0 + pad * 0.5);
+    } else {
+        np = vec2(0.0, -1.0 - pad * 0.5);
+    }
+    float nr = 0.085;
+    vec2 q = (l - np) / nr;
+    float qpx = px / nr;
+    float disk = 1.0 - smoothstep(1.0 - qpx, 1.0 + qpx, length(q));
+    if (disk > 0.0) {
+        float ring = smoothstep(0.78 - qpx, 0.78 + qpx, length(q));
+        vec3 dc = mix(vec3(0.85, 0.2, 0.18), vec3(0.08, 0.06, 0.06), ring);
+        float letter = 1.0 - smoothstep(0.11 - qpx, 0.11 + qpx, axonMiniLetterN(q * 1.55));
+        dc = mix(dc, vec3(1.0), letter);
+        o = axonMiniOver(vec4(dc, disk), o);
+    }
+    return o;
+}
+
+const vec3 AXON_MINI_PINS[8] = vec3[8](vec3(1.0, 0.58, 0.18), vec3(0.32, 0.86, 1.0), vec3(0.93, 0.91, 0.86),
+        vec3(0.36, 0.9, 0.5), vec3(0.38, 0.58, 1.0), vec3(0.95, 0.27, 0.25), vec3(1.0, 0.84, 0.26), vec3(0.8, 0.52, 1.0));
+
+// Kształt znacznika (ujemny w środku): działka = zaokrąglony kwadrat, członek działki = kółko,
+// struktura = romb, punkt = pinezka, śmierć = krzyżyk.
+float axonMiniPinShape(vec2 l, int type) {
+    if (type == 5) {
+        float x = min(abs(l.x - l.y), abs(l.x + l.y)) * 0.7071 - 0.13;
+        return max(x, length(l) - 0.62);
+    }
+    if (type == 0) {
+        vec2 q = abs(l) - vec2(0.38);
+        return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 0.12;
+    }
+    if (type == 1) {
+        return length(l) - 0.5;
+    }
+    if (type == 2 || type == 3) {
+        return (abs(l.x) + abs(l.y)) * 0.7071 - 0.42;
+    }
+    // pinezka: kółko u góry i szpic w dół
+    vec2 c = l - vec2(0.0, -0.22);
+    float circle = length(c) - 0.42;
+    float h = clamp((l.y + 0.22) / 1.0, 0.0, 1.0);
+    float cone = max(abs(l.x) - 0.42 * (1.0 - h) * 0.95, max(-0.22 - l.y, l.y - 0.78));
+    return min(circle, cone);
+}
+
+vec4 axonMiniPin() {
+    vec2 l = axonMiniL;
+    int type = int(fract(axonMiniA.z) * 16.0 + 0.5) & 7;
+    float px = max(fwidth(l.x), 1e-3);
+    vec3 c = AXON_MINI_PINS[type];
+    if (axonMiniB.x > 0.5) {
+        // poza mapą: grot na krawędzi wskazujący kierunek
+        vec2 dir = vec2(cos(axonMiniB.y), sin(axonMiniB.y));
+        vec2 a = vec2(dot(l, vec2(-dir.y, dir.x)), dot(l, dir)) / 0.7;
+        float apx = px / 0.7;
+        float t = max(abs(a.x) * 1.9 + a.y - 0.8, -a.y - 0.6);
+        float ts = max(abs(a.x) * 1.9 + a.y - 0.8, -a.y - 0.6) - 0.22;
+        float fill = 1.0 - smoothstep(-apx, apx, t + 0.2);
+        float rim = 1.0 - smoothstep(-apx, apx, ts);
+        return vec4(mix(vec3(0.05), c, fill), rim * 0.9);
+    }
+    float d = axonMiniPinShape(l, type);
+    float ds = axonMiniPinShape(l - vec2(0.07, 0.11), type);
+    vec4 o = vec4(0.0, 0.0, 0.0, 0.4 * (1.0 - smoothstep(0.0, 0.2, ds)));
+    float rim = 1.0 - smoothstep(0.14 - px, 0.14 + px, d);
+    float fill = 1.0 - smoothstep(-px, px, d);
+    // lekki połysk u góry wypełnienia
+    vec3 fc = c * (1.0 + 0.18 * clamp(-l.y, 0.0, 1.0));
+    if (type >= 4 && type != 5) {
+        // biała kropka w główce pinezki
+        float dot_ = 1.0 - smoothstep(0.15 - px, 0.15 + px, length(l - vec2(0.0, -0.22)));
+        fc = mix(fc, vec3(1.0), dot_);
+    }
+    vec4 shape = vec4(mix(vec3(0.05, 0.05, 0.06), fc, fill), rim);
+    return axonMiniOver(shape, o);
+}
+
 void main() {
+    if (axonMiniA.z > 0.5) {
+        int k = int(axonMiniA.z);
+        if (k == 5) {
+            fragColor = axonMiniTile();
+        } else if (k == 3) {
+            fragColor = axonMiniPin();
+        } else {
+            fragColor = axonMiniFrame(k == 2);
+        }
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
     if (axonHud == 4) {
         fragColor = axonHudBar();
         if (fragColor.a < 0.004) {
@@ -558,12 +776,10 @@ void main() {
         return;
     }
     if (axonMap == 1) {
-        // Mapa AxonMap: bez światła i mgły. Ostry ekran (gęstość 2) skalujemy gładko, zwykły jak dotąd.
-        if (axonDensity > 1) {
-            fragColor = vec4(axonSharp(texCoord0), 1.0);
-        } else {
-            fragColor = vec4(axonTexel(ivec2(texCoord0 * 128.0)), 1.0);
-        }
+        // Mapa AxonMap: bez światła i mgły.
+        // Obie gęstości skalujemy gładko: 384 wiersze mapy na 1080 px ekranu to 2,81 px na piksel,
+        // a bez tego część wierszy ma 2 px, część 3 px i litery wychodzą nierówne.
+        fragColor = vec4(axonSharp(texCoord0), 1.0);
 
         // Sprity i kursor są w pikselach logicznych ekranu 640x384, niezależnie od gęstości siatki.
         int cols = AXON_COLS * axonDensity;
