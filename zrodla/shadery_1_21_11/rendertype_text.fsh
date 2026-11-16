@@ -12,19 +12,24 @@
 
 uniform sampler2D Sampler0;
 
-in float sphericalVertexDistance;
-in float cylindricalVertexDistance;
+in vec4 axonSm;
+#define sphericalVertexDistance axonSm.x
+#define cylindricalVertexDistance axonSm.y
+#define axonMiniL axonSm.zw
 in vec4 vertexColor;
 in vec2 texCoord0;
-flat in int axonMap;
-flat in int axonTile;
-flat in int axonDensity;
-flat in vec2 axonCursor;
+// Varyingi spakowane (NVIDIA: 'cannot locate suitable resource to bind variable', za dużo slotów)
+flat in ivec4 axonI;
+#define axonMap axonI.x
+#define axonTile axonI.y
+#define axonDensity axonI.z
+#define axonHud axonI.w
+flat in vec3 axonCC;
+#define axonCursor axonCC.xy
+#define axonClock axonCC.z
 flat in vec4 axonSpriteA[AXON_SPRITES];
 flat in vec4 axonSpriteB[AXON_SPRITES];
-flat in vec2 axonSpriteLim[AXON_SPRITES];
-flat in float axonClock;
-flat in int axonHud;
+flat in vec4 axonSpriteLimP[(AXON_SPRITES + 1) / 2];
 in vec2 axonHudLocal;
 flat in vec4 axonHudBox;
 flat in vec3 axonHudBg;
@@ -34,7 +39,6 @@ flat in vec4 axonHudAcc2;
 flat in vec4 axonHudExtra;
 flat in vec4 axonMiniA;
 flat in vec4 axonMiniB;
-in vec2 axonMiniL;
 
 out vec4 fragColor;
 
@@ -245,7 +249,7 @@ void axonSprite(inout vec3 base, vec2 p, float px, vec2 cursor, int i) {
         return;
     }
     float dt = mod(axonClock - b.w, AXON_CLOCK_PERIOD);
-    vec2 lim = axonSpriteLim[i];
+    vec2 lim = (((i & 1) == 0) ? axonSpriteLimP[i >> 1].xy : axonSpriteLimP[i >> 1].zw);
     vec2 pos = a.xy;
     if (kind != 5) {
         pos += a.zw * dt;
