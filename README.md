@@ -45,6 +45,15 @@ Prześwitujące beczki (blok `barrel`): gra uznaje beczkę za pełny, nieprzezro
 
 Stanowiska i inne przedmioty z Axon-items mogą być w świecie przedmiotem `minecraft:barrier` z `custom_model_data` = `abs(hashCode("axon:<nazwa>")) % 100000 + 1` (np. `axon:warsztat_t3` to 93667), a nie komponentem `item_model`. `zrodla/dodaj_barrier.py` dopisuje do zipów `assets/minecraft/items/barrier.json` z tymi numerami dla każdego `axon:<nazwa>` (woła go `buduj_1_21_11.py`); bez tego taki warsztat był fioletowo-czarną kostką.
 
+## Bronie AxonGuns: poza i celowanie (`axon:bron`)
+
+Plugin AxonGuns daje broni `item_model` = `axon:bron` i `custom_model_data` = numer broni z QA + 10000 (QA nie bierze jej wtedy za swoją). `assets/axon/items/bron.json` wybiera model:
+- bez klawisza: model broni z QA (ustawiony pod naładowaną kuszę, więc postać trzyma broń oburącz),
+- Shift, a przy fladze 0 (sterowanie `lpm`) także PPM: wariant `axon:bron/cel/<broń>`, czyli widok przez przyrządy z QA (`firstperson_lefthand`) przeliczony do prawej ręki z naładowaną kuszą. Klient przełącza go od razu (`keybind_down`), bez czekania na serwer,
+- flaga 1 (sterowanie `uzywanie`, broń nie jest kuszą): warianty `biodro_u` i `cel_u` z poprawką na brak przesunięcia kuszy w pierwszej osobie i broń obróconą pod zwykłą pozę ręki w trzeciej.
+
+Warianty to małe modele z `parent` = model broni i samym `display`. Generuje je `zrodla/gen_axonguns.py` dla każdej broni `qualityarmory:gun/*` z `crossbow.json` (wołany z `build_pack.py` i `buduj_1_21_11.py`; sam z siebie łata podane zipy). Na 1.21–1.21.3 jest tylko model biodra (nakładka `axon_1_21_0`). Podgląd: `zrodla/preview_axonguns.py`, `podglady/axonguns-poza-celowanie.png`.
+
 ## Wersje Minecrafta (1.21–1.21.11)
 
 Jedna paczka działa na wszystkich wersjach 1.21.x. `pack.mcmeta` deklaruje formaty 34–75 w obu zapisach (stary `pack_format` + `supported_formats` i nowy `min_format`/`max_format` od 1.21.9), a różnice między wersjami załatwiają nakładki (`overlays`), które gra wczytuje tylko na pasujących wersjach:
