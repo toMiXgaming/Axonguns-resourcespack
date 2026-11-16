@@ -896,7 +896,166 @@ vec4 axonCompassMarker() {
     return o;
 }
 
+// ── Okno UI AxonItems (/ustawienia): pudełka i kursor (rendertype_text.vsh, axonUiVertex) ─────────
+// Podświetlenie pod kursorem, poświata i kursor są liczone tutaj w każdej klatce, bez serwera.
+const vec3 AXON_UI_ACC = vec3(110.0, 220.0, 190.0) / 255.0;
+
+vec4 axonUiOver(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / max(a, 1e-4), a);
+}
+
+vec4 axonUiBox() {
+    vec2 size = axonHudBox.xy;
+    int style = int(axonHudBox.z + 0.5);
+    int state = int(axonHudBox.w + 0.5);
+    vec2 p = axonHudLocal;
+    float r = axonHudExtra.z;
+    vec2 cur = axonCursor * vec2(640.0, 384.0) - axonHudExtra.xy;
+    float aa = max(fwidth(p.x), 1e-3);
+    float t = GameTime * 24000.0 / 20.0;
+    float d = axonRoundBox(p - size * 0.5, size * 0.5, r);
+    bool button = style == 3 || style == 4 || style == 5 || style == 7;
+    bool hot = button && state != 2 && cur.x >= 0.0 && cur.y >= 0.0 && cur.x < size.x && cur.y < size.y;
+    bool lit = state == 1 || state == 3;
+
+    // cień: panel głęboki, przyciski płytki; najechany przycisk „unosi się”
+    float lift = hot ? 3.0 : 1.5;
+    float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, lift), size * 0.5, r + 1.0);
+    float shadowA = style == 1 ? 0.45 : (button ? (hot ? 0.38 : 0.22) : 0.0);
+    float spread = style == 1 ? 10.0 : 5.0;
+    vec4 under = vec4(0.0, 0.0, 0.0, shadowA * (1.0 - smoothstep(-2.0, spread, ds)));
+    if (hot) {
+        // poświata akcentu wokół najechanego przycisku
+        under = axonUiOver(vec4(AXON_UI_ACC, 0.22 * (1.0 - smoothstep(0.0, 7.0, d))), under);
+    }
+
+    float inside = 1.0 - smoothstep(-aa, aa, d);
+    if (style == 9) {
+        // linia: od akcentu do przezroczystej
+        float f = 1.0 - clamp(p.x / max(size.x, 1.0), 0.0, 1.0);
+        return vec4(mix(vec3(0.3), AXON_UI_ACC, f), 0.55 * f * inside);
+    }
+    if (inside <= 0.0) {
+        return under;
+    }
+
+    vec3 col;
+    float alpha;
+    if (style == 1) {
+        col = mix(vec3(0.085, 0.095, 0.115), vec3(0.055, 0.062, 0.078), clamp(p.y / size.y, 0.0, 1.0));
+        alpha = 0.93;
+        // pasek nagłówka i delikatna poświata akcentu w lewym górnym rogu
+        col += AXON_UI_ACC * 0.06 * (1.0 - smoothstep(0.0, 260.0, length(p - vec2(40.0, 10.0))));
+    } else if (style == 2) {
+        col = vec3(0.045, 0.05, 0.062);
+        alpha = 0.75;
+    } else if (style == 6) {
+        col = vec3(0.07, 0.08, 0.1);
+        alpha = 0.9;
+    } else if (style == 10) {
+        col = state == 2 ? vec3(0.32, 0.1, 0.1) : vec3(0.08, 0.2, 0.17);
+        alpha = 0.95;
+    } else {
+        col = vec3(0.12, 0.13, 0.16);
+        alpha = 0.92;
+        if (style == 4 && !lit) {
+            col = vec3(0.1, 0.11, 0.135);
+        }
+        if (lit) {
+            col = mix(col, AXON_UI_ACC, style == 4 ? 0.32 : 0.12);
+        }
+        if (state == 2) {
+            col *= 0.7;
+            alpha = 0.7;
+        }
+        if (hot) {
+            col += vec3(0.06);
+            // światło podążające za kursorem
+            col += AXON_UI_ACC * 0.16 * (1.0 - smoothstep(0.0, 70.0, length(p - cur)));
+        }
+        // lekki połysk u góry
+        col += vec3(0.035) * (1.0 - smoothstep(0.0, size.y * 0.6, p.y));
+    }
+
+    // obwódka 1 px: jaśniejsza u góry, akcent przy najechaniu i aktywnych
+    float rim = 1.0 - smoothstep(0.0, 1.3, -d);
+    vec3 rimCol = mix(vec3(0.24, 0.26, 0.3), vec3(0.14, 0.15, 0.18), clamp(p.y / size.y, 0.0, 1.0));
+    float rimA = 0.8;
+    if (hot || (lit && style != 1)) {
+        rimCol = AXON_UI_ACC;
+        rimA = hot ? 0.95 : 0.55;
+    }
+    if (style == 1) {
+        rimA = 0.5;
+    }
+    col = mix(col, rimCol, rim * rimA);
+
+    // aktywna karta / kafel: pasek akcentu z lewej, delikatnie pulsuje
+    if (lit && (style == 3 || style == 5)) {
+        float pulse = 0.8 + 0.2 * sin(t * 2.2);
+        float bar = axonRect(p, 3.0, 6.0, 3.0, size.y - 12.0, 1.5);
+        col = mix(col, AXON_UI_ACC * pulse + vec3(0.05), 1.0 - smoothstep(-aa, aa, bar));
+    }
+    // kafel: kropka stanu po prawej (zapalona = włączone)
+    if (style == 5) {
+        vec2 dc = vec2(size.x - 14.0, size.y * 0.5);
+        float dd = length(p - dc);
+        if (lit) {
+            col = mix(col, AXON_UI_ACC, 0.35 * (1.0 - smoothstep(3.0, 9.0, dd)));
+            col = mix(col, AXON_UI_ACC + vec3(0.1), 1.0 - smoothstep(3.5 - aa, 3.5 + aa, dd));
+        } else {
+            col = mix(col, vec3(0.42, 0.45, 0.5), 1.0 - smoothstep(0.6, 0.6 + aa * 1.5, abs(dd - 3.5)));
+        }
+    }
+    // zamknij: krzyżyk, czerwony przy najechaniu
+    if (style == 7) {
+        vec2 c = size * 0.5;
+        float x = min(axonSegment(p, c - vec2(4.5), c + vec2(4.5)), axonSegment(p, c + vec2(-4.5, 4.5), c + vec2(4.5, -4.5)));
+        vec3 xc = hot ? vec3(1.0, 0.45, 0.42) : vec3(0.85, 0.87, 0.9);
+        col = mix(col, xc, 1.0 - smoothstep(0.9 - aa, 0.9 + aa, x));
+    }
+    return axonUiOver(vec4(col, alpha * inside), under);
+}
+
+// Trójkąt ze znakiem odległości (ujemna w środku).
+float axonUiTri(vec2 p, vec2 a, vec2 b, vec2 c) {
+    vec2 e0 = b - a, e1 = c - b, e2 = a - c;
+    vec2 v0 = p - a, v1 = p - b, v2 = p - c;
+    vec2 pq0 = v0 - e0 * clamp(dot(v0, e0) / dot(e0, e0), 0.0, 1.0);
+    vec2 pq1 = v1 - e1 * clamp(dot(v1, e1) / dot(e1, e1), 0.0, 1.0);
+    vec2 pq2 = v2 - e2 * clamp(dot(v2, e2) / dot(e2, e2), 0.0, 1.0);
+    float s = sign(e0.x * e2.y - e0.y * e2.x);
+    vec2 d = min(min(vec2(dot(pq0, pq0), s * (v0.x * e0.y - v0.y * e0.x)),
+                     vec2(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))),
+                     vec2(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x)));
+    return -sqrt(d.x) * sign(d.y);
+}
+
+// Kursor: strzałka z czarną obwódką i miękkim cieniem; czubek w punkcie kursora (lokalnie 3, 3).
+vec4 axonUiCursor() {
+    vec2 p = axonHudLocal - vec2(3.0);
+    float aa = max(fwidth(p.x), 1e-3);
+    vec2 a = vec2(0.0), b = vec2(0.0, 13.0), c = vec2(9.5, 9.5);
+    float d = axonUiTri(p, a, b, c);
+    float tail = axonSegment(p, vec2(3.5, 8.0), vec2(6.5, 14.0)) - 1.6;
+    d = min(d, tail);
+    float ds = min(axonUiTri(p - vec2(1.0, 1.5), a, b, c), axonSegment(p - vec2(1.0, 1.5), vec2(3.5, 8.0), vec2(6.5, 14.0)) - 1.6);
+    vec4 shadow = vec4(0.0, 0.0, 0.0, 0.35 * (1.0 - smoothstep(-1.0, 2.5, ds)));
+    float fill = 1.0 - smoothstep(-aa, aa, d + 1.0);
+    float edge = 1.0 - smoothstep(-aa, aa, d);
+    vec4 arrow = vec4(mix(vec3(0.05), vec3(1.0), fill), edge);
+    return axonUiOver(arrow, shadow);
+}
+
 void main() {
+    if (axonHud >= 20) {
+        fragColor = axonHud == 21 ? axonUiCursor() : axonUiBox();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
     if (axonMiniA.z > 0.5) {
         int k = int(axonMiniA.z);
         if (k == 5) {

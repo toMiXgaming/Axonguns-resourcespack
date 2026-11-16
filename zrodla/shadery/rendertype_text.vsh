@@ -590,6 +590,93 @@ bool axonMiniVertex() {
     return true;
 }
 
+// ── Okno UI AxonItems (/ustawienia) ─────────────────────────────────────────────────────────────
+// Napisy i pudełka okna to encje tekstowe (TextDisplay) tylko dla gracza: billboard CENTER w miejscu
+// oka gracza, przesunięte o AXON_UI_DEPTH bloków przed kamerę, skala 10 (1 piksel czcionki = AXON_UI_UNIT
+// bloku = 1 piksel płótna 640 × 384). Shader przenosi je na ekran nad kafle mapy, więc tekst jest ostry,
+// a podświetlenie pod kursorem i kursor liczy klient w każdej klatce (serwer zmienia tylko stan po kliknięciu).
+// Rozpoznanie: perspektywa, otwarte pełne GUI (axonMapOpen), alfa koloru 252/253 (text opacity encji)
+// i odległość w widoku ~AXON_UI_DEPTH.
+//   alfa 253: napis; kolor #010203 to niewidoczny wypełniacz (ustala lewą krawędź wyrównania)
+//   alfa 252: pudełko; jeden znak = jedno pudełko: R = x / 2 (młodsze 8 bitów), G = y / 2,
+//             B = styl 5 bitów | stan 2 bity << 5 | najstarszy bit x / 2 << 7
+//             stan: 0 zwykły, 1 aktywny, 2 wyłączony, 3 wciśnięty/zaznaczony
+#define AXON_UI_DEPTH 16.0
+#define AXON_UI_UNIT 0.25
+#define AXON_UI_STYLES 12
+// szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
+const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
+    vec4(0.0, 0.0, 0.0, -0.9920),
+    vec4(608.0, 356.0, 12.0, -0.9905),   // 1 panel okna
+    vec4(164.0, 300.0, 9.0, -0.9910),    // 2 pasek kart
+    vec4(148.0, 26.0, 7.0, -0.9920),     // 3 karta
+    vec4(124.0, 20.0, 10.0, -0.9920),    // 4 zakładka (pigułka)
+    vec4(204.0, 40.0, 8.0, -0.9920),     // 5 kafel ustawienia
+    vec4(416.0, 36.0, 8.0, -0.9915),     // 6 opis pod kursorem
+    vec4(26.0, 22.0, 7.0, -0.9920),      // 7 zamknij
+    vec4(20.0, 20.0, 0.0, -0.9990),      // 8 kursor
+    vec4(416.0, 2.0, 1.0, -0.9915),      // 9 linia
+    vec4(140.0, 16.0, 8.0, -0.9920),     // 10 plakietka
+    vec4(204.0, 40.0, 8.0, -0.9920));    // 11 zapas
+
+vec4 axonUiClip(vec2 px, float z) {
+    return vec4(px.x / 320.0 - 1.0, 1.0 - px.y / 192.0, z, 1.0);
+}
+
+bool axonUiVertex() {
+    if (ProjMat[2][3] == 0.0 || !axonMapOpen(GameTime)) {
+        return false;
+    }
+    float a = floor(Color.a * 255.0 + 0.5);
+    if (a < 251.5 || a > 253.5) {
+        return false;
+    }
+    vec4 view = ModelViewMat * vec4(Position, 1.0);
+    if (abs(abs(view.z) - AXON_UI_DEPTH) > 3.0) {
+        return false;
+    }
+    ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
+    if (a > 252.5) {
+        if (c == ivec3(1, 2, 3)) {
+            gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+            return true;
+        }
+        vec2 px = vec2(320.0 + view.x / AXON_UI_UNIT, 192.0 - view.y / AXON_UI_UNIT);
+        gl_Position = axonUiClip(px, -0.9960);
+        vertexColor = vec4(Color.rgb, 1.0);
+        texCoord0 = UV0;
+        return true;
+    }
+    int style = min(c.b & 31, AXON_UI_STYLES - 1);
+    int state = (c.b >> 5) & 3;
+    vec2 org = vec2(float(c.r | ((c.b >> 7) << 8)), float(c.g)) * 2.0;
+    vec4 st = AXON_UI_STYLE[style];
+    // kursor jak w kaflach mapy: z obrotu kamery, w pikselach płótna 640 × 384
+    vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
+    float yaw = degrees(atan(-forward.x, forward.z));
+    float pitch = degrees(asin(clamp(-forward.y, -1.0, 1.0)));
+    axonCursor = clamp(vec2(0.5 + yaw / AXON_YAW_RANGE, 0.5 + pitch / AXON_PITCH_RANGE), 0.0, 1.0);
+    vec2 cur = axonCursor * vec2(640.0, 384.0);
+    int vc = gl_VertexID % 4;
+    vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
+    float pad = 10.0;
+    if (style == 8) {
+        org = cur - vec2(3.0);
+        pad = 0.0;
+        axonHud = 21;
+    } else {
+        axonHud = 20;
+    }
+    vec2 local = mix(vec2(-pad), st.xy + pad, cv);
+    gl_Position = axonUiClip(org + local, st.w);
+    axonHudLocal = local;
+    axonHudBox = vec4(st.xy, float(style), float(state));
+    axonHudExtra = vec4(org, st.z, 0.0);
+    vertexColor = vec4(1.0);
+    texCoord0 = UV0;
+    return true;
+}
+
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     axonHud = 0;
@@ -622,6 +709,10 @@ void main() {
         if (axonHud != 0 && axonMapOpen(GameTime)) {
             gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);   // panel tablicy chowa się przy pełnej mapie AxonMap
         }
+        return;
+    }
+    if (axonUiVertex()) {
+        vertexDistance = 0.0;
         return;
     }
     if (axonMiniVertex()) {
