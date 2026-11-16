@@ -191,6 +191,8 @@ def main():
     wnetrze_bloku(DST)
     from dodaj_barrier import patch as dodaj_barrier   # definicja items/barrier.json dla stanowisk (dodaj_barrier.py)
     dodaj_barrier(DST)
+    from gen_axonguns import patch as axonguns   # broń AxonGuns: definicja axon:bron, celowanie i poza kuszy (gen_axonguns.py)
+    axonguns(DST)
     from sprawdz_paczke import main as sprawdz   # nie zostawiaj uszkodzonej paczki
     if sprawdz([DST]):
         raise SystemExit('paczka nie przeszła sprawdz_paczke.py')

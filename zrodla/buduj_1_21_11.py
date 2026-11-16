@@ -40,6 +40,8 @@ def main():
     from wnetrze_bloku import patch as wnetrze_bloku
     wnetrze_bloku(OUT)
     dodaj_barrier(OUT)
+    from gen_axonguns import patch as axonguns
+    axonguns(OUT)
     sys.path.insert(0, HERE)
     from sprawdz_paczke import main as sprawdz
     return sprawdz([SRC, OUT])
