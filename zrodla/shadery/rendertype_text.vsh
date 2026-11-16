@@ -625,6 +625,10 @@ void main() {
         return;
     }
     if (axonMiniVertex()) {
+        if (axonMapOpen(GameTime)) {
+            // minimapa i kompas chowają się przy pełnym ekranie (mapa AxonMap, warsztaty, skrzynie i inne GUI AxonOverlay)
+            gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+        }
         vertexDistance = 0.0;
         return;
     }
