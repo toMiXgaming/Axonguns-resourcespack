@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Modele broni dla pluginu AxonGuns: poza kuszy (oburącz) i celowanie bez podmiany przedmiotu.
 
-QualityArmory trzyma broń jako *naładowaną kuszę* (crossbow + custom_model_data), dlatego postać trzyma ją
-oburącz, a `firstperson_righthand` modeli jest ustawione pod dodatkowe przesunięcie, które klient robi dla
-naładowanej kuszy (x -0.641864, obrót Y 10°). Celowanie w QA to przełożenie broni do lewej ręki
+Modele broni QA (`firstperson_righthand`) są ustawione pod zwykłą, nienaładowaną kuszę. AxonGuns trzyma broń
+jako *naładowaną* kuszę, żeby postać trzymała ją oburącz, a klient przesuwa naładowaną kuszę w pierwszej osobie
+(x -0.641864, obrót Y 10°). Bez poprawki broń była za bardzo po lewej (sprawdzone w grze 16.11), więc wariant
+„biodro” cofa to przesunięcie. Celowanie w QA to przełożenie broni do lewej ręki
 (`firstperson_lefthand` = widok przez przyrządy) i przedmiot „aiming” (kusza 68) w prawej.
 
 AxonGuns nie zmienia przedmiotu w trakcie strzelania, więc celowanie robi definicja przedmiotu `axon:bron`:
@@ -15,7 +16,7 @@ AxonGuns nie zmienia przedmiotu w trakcie strzelania, więc celowanie robi defin
   brało broni AxonGuns za swoją (QA rozpoznaje broń po materiale i numerze).
 
 Warianty to małe modele z `parent` = model broni z QA i samym `display` (assets/axon/models/bron/<wariant>/<broń>.json).
-Wariant „biodro” na kuszy to po prostu model QA.
+Na 1.21–1.21.3 (bez definicji przedmiotów) naładowana kusza pokazuje wariant „biodro”.
 
 Użycie: python3 zrodla/gen_axonguns.py plik.zip [...] (build_pack.py i buduj_1_21_11.py wołają patch()).
 """
@@ -90,10 +91,11 @@ def fp_ads_plain(lh):
     return pack(ARM_L + tL - ARM_R, RL, S)
 
 
-def fp_hip_plain(rh):
-    """Biodro QA (ustawione pod naładowaną kuszę) dla przedmiotu, który kuszą nie jest."""
+def fp_hip_charged(rh):
+    """Biodro QA (ustawione pod zwykłą kuszę) w prawej ręce z naładowaną kuszą: cofamy przesunięcie klienta."""
     t, R, S = unpack(rh)
-    return pack(CHARGED_T + CHARGED_R @ t, CHARGED_R @ R, S)
+    Rinv = CHARGED_R.T
+    return pack(Rinv @ (t - CHARGED_T), Rinv @ R, S)
 
 
 def tp_item_pose(rh):
@@ -131,8 +133,9 @@ def warianty(display):
     rh = display.get('firstperson_righthand', {})
     lh = display.get('firstperson_lefthand', rh)
     tp = display.get('thirdperson_righthand', {})
-    w = {'cel': {'firstperson_righthand': fp_ads_charged(lh)},
-         'biodro_u': {'firstperson_righthand': fp_hip_plain(rh)},
+    w = {'biodro': {'firstperson_righthand': fp_hip_charged(rh)},
+         'cel': {'firstperson_righthand': fp_ads_charged(lh)},
+         'biodro_u': {},
          'cel_u': {'firstperson_righthand': fp_ads_plain(lh)}}
     tpu = tp_item_pose(tp)
     w['biodro_u']['thirdperson_righthand'] = tpu
@@ -155,7 +158,7 @@ def bronie(z):
 def _dispatch(guns, wariant):
     entries = []
     for cmd, ref in guns:
-        model = ref if wariant == 'biodro' else 'axon:bron/%s/%s' % (wariant, ref.split('/')[-1])
+        model = 'axon:bron/%s/%s' % (wariant, ref.split('/')[-1])
         entries.append({'threshold': OFFSET + cmd, 'model': {'type': 'minecraft:model', 'model': model}})
     return {'type': 'minecraft:range_dispatch', 'property': 'minecraft:custom_model_data', 'index': 0,
             'fallback': FALLBACK, 'entries': entries}
@@ -194,7 +197,8 @@ def pliki(z):
     if OLD_CROSSBOW in names:
         old = json.loads(z.read(OLD_CROSSBOW))
         ov = [o for o in old.get('overrides', []) if o.get('predicate', {}).get('custom_model_data', 0) < OFFSET]
-        extra = [{'predicate': {'custom_model_data': OFFSET + cmd}, 'model': ref} for cmd, ref in guns]
+        extra = [{'predicate': {'custom_model_data': OFFSET + cmd}, 'model': 'axon:bron/biodro/' + ref.split('/')[-1]}
+                 for cmd, ref in guns]
         old['overrides'] = ov + extra
         out[OLD_CROSSBOW] = (json.dumps(old, indent=1) + '\n').encode()
         item = {k: v for k, v in old.items() if k != 'overrides'}
