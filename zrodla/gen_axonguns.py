@@ -91,11 +91,30 @@ def fp_ads_plain(lh):
     return pack(ARM_L + tL - ARM_R, RL, S)
 
 
-def fp_hip_charged(rh):
-    """Biodro QA (ustawione pod zwykłą kuszę) w prawej ręce z naładowaną kuszą: cofamy przesunięcie klienta."""
+# Poprawki biodra w widoku z pierwszej osoby (bloki; x w prawo, y w górę, z do tyłu), po zrzutach Tomka 16.11.
+# Klucz to nazwa broni bez skina (ak47_zloto -> ak47).
+HIP_TWEAK = {
+    'ak47': (0.0, 0.0, -0.08),      # minimalnie do przodu
+    'awp': (0.0, 0.06, 0.0),        # lekko do góry
+    'spas': (0.07, 0.05, 0.0),      # lekko w prawo i trochę do góry
+}
+
+
+def tweak(name):
+    return np.array(HIP_TWEAK.get(name.split('_')[0], (0.0, 0.0, 0.0)), float)
+
+
+def fp_hip_charged(rh, v=np.zeros(3)):
+    """Biodro QA (ustawione pod zwykłą kuszę) w prawej ręce z naładowaną kuszą: cofamy przesunięcie klienta.
+    v = dodatkowe przesunięcie w widoku kamery."""
     t, R, S = unpack(rh)
     Rinv = CHARGED_R.T
-    return pack(Rinv @ (t - CHARGED_T), Rinv @ R, S)
+    return pack(Rinv @ (t + v - CHARGED_T), Rinv @ R, S)
+
+
+def fp_hip_plain(rh, v):
+    t, R, S = unpack(rh)
+    return pack(t + v, R, S)
 
 
 def tp_item_pose(rh):
@@ -128,14 +147,15 @@ def _display(z, ref, names):
     return out
 
 
-def warianty(display):
+def warianty(display, name=''):
     # brak wpisu = przekształcenie tożsamościowe (tak robi klient, np. AWP nie ma firstperson_righthand)
     rh = display.get('firstperson_righthand', {})
     lh = display.get('firstperson_lefthand', rh)
     tp = display.get('thirdperson_righthand', {})
-    w = {'biodro': {'firstperson_righthand': fp_hip_charged(rh)},
+    v = tweak(name)
+    w = {'biodro': {'firstperson_righthand': fp_hip_charged(rh, v)},
          'cel': {'firstperson_righthand': fp_ads_charged(lh)},
-         'biodro_u': {},
+         'biodro_u': {'firstperson_righthand': fp_hip_plain(rh, v)} if v.any() else {},
          'cel_u': {'firstperson_righthand': fp_ads_plain(lh)}}
     tpu = tp_item_pose(tp)
     w['biodro_u']['thirdperson_righthand'] = tpu
@@ -182,15 +202,78 @@ def definicja(guns):
                       'on_false': _cel_albo(guns, 'cel', 'biodro')}}
 
 
+# Luneta przy celowaniu (wariant „cel” to pełny model zamiast samego display):
+# czarna osłona wokół okularu zasłania świat na rogach ekranu, a krzyż jest cienki i bez środka.
+SCOPES = {'awp'}
+RET_HALF = 0.008      # połowa grubości kreski (jednostki modelu; luneta AWP ma skalę 2,2)
+RET_GAP = 0.12        # pusty środek krzyża (od środka do początku kreski)
+PLATE = 9.0           # zasięg osłony od osi lunety
+
+
+def _box(fr, to, face):
+    faces = {k: dict(face) for k in ('north', 'south', 'east', 'west', 'up', 'down')}
+    return {'from': [round(x, 4) for x in fr], 'to': [round(x, 4) for x in to], 'faces': faces}
+
+
+def luneta(model):
+    els = [e for e in model['elements'] if not e.get('name', '').startswith('ret_')]
+    by = {e.get('name'): e for e in model['elements']}
+    ret = by.get('ret_v')
+    oc_t, oc_r = by.get('ocular_t'), by.get('ocular_r')
+    if ret is None or oc_t is None or oc_r is None:
+        return None
+    black = dict(next(iter(oc_t['faces'].values())))
+    black.pop('cullface', None)
+    lines = dict(next(iter(ret['faces'].values())))
+    lines.pop('cullface', None)
+    cx = (ret['from'][0] + ret['to'][0]) / 2
+    cy = (by['ret_h_l']['from'][1] + by['ret_h_l']['to'][1]) / 2
+    z0, z1 = ret['from'][2], ret['to'][2]
+    rr = (ret['to'][1] - ret['from'][1]) / 2        # długość ramion krzyża = wnętrze tubusu
+    ri = rr                                          # okno osłony = najwęższe miejsce tubusu (bez prześwitów w rogach)
+    a, g = RET_HALF, RET_GAP
+    out = list(els)
+    for nm, fr, to in (('ret_t', (cx - a, cy + g, z0), (cx + a, cy + rr, z1)),
+                       ('ret_b', (cx - a, cy - rr, z0), (cx + a, cy - g, z1)),
+                       ('ret_l', (cx - rr, cy - a, z0), (cx - g, cy + a, z1)),
+                       ('ret_p', (cx + g, cy - a, z0), (cx + rr, cy + a, z1))):
+        b = _box(fr, to, lines); b['name'] = nm; out.append(b)
+    zf, zb = oc_r['from'][2], oc_r['from'][2] + 0.05   # osłona na początku okularu
+    P = PLATE
+    for nm, fr, to in (('oslona_g', (cx - P, cy + ri, zf), (cx + P, cy + P, zb)),
+                       ('oslona_d', (cx - P, cy - P, zf), (cx + P, cy - ri, zb)),
+                       ('oslona_l', (cx - P, cy - ri, zf), (cx - ri, cy + ri, zb)),
+                       ('oslona_p', (cx + ri, cy - ri, zf), (cx + P, cy + ri, zb))):
+        b = _box(fr, to, black); b['name'] = nm; out.append(b)
+    for e in out:
+        for k in (0, 1, 2):
+            assert -16 <= e['from'][k] <= 32 and -16 <= e['to'][k] <= 32, e
+    m = dict(model)
+    m['elements'] = out
+    return m
+
+
+def _model(z, ref):
+    ns, p = ref.split(':', 1)
+    return json.loads(z.read('assets/%s/models/%s.json' % (ns, p)))
+
+
 def pliki(z):
     names = set(z.namelist())
     guns = bronie(z)
     out = {}
     for cmd, ref in guns:
-        w = warianty(_display(z, ref, names))
         name = ref.split('/')[-1]
+        display = _display(z, ref, names)
+        w = warianty(display, name)
         for wariant, disp in w.items():
-            out[PREFIX + '%s/%s.json' % (wariant, name)] = (json.dumps({'parent': ref, 'display': disp}, indent=1) + '\n').encode()
+            model = {'parent': ref, 'display': disp}
+            if wariant in ('cel', 'cel_u') and name.split('_')[0] in SCOPES:
+                full = luneta(_model(z, ref))
+                if full is not None:
+                    full['display'] = dict(display, **disp)
+                    model = full
+            out[PREFIX + '%s/%s.json' % (wariant, name)] = (json.dumps(model, indent=1) + '\n').encode()
     out[ITEM] = (json.dumps(definicja(guns), indent=1) + '\n').encode()
     # 1.21-1.21.3: bez definicji przedmiotów; 1.21.2-1.21.3 czytają item_model jako models/item/bron,
     # 1.21-1.21.1 widzą zwykłą kuszę z numerem 10000+n. Tam tylko model biodra.

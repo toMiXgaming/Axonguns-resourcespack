@@ -42,6 +42,8 @@ def main():
     dodaj_barrier(OUT)
     from gen_axonguns import patch as axonguns
     axonguns(OUT)
+    from gen_luski import patch as luski   # łuski AxonGuns axon:luska_* (gen_luski.py)
+    luski(OUT)
     sys.path.insert(0, HERE)
     from sprawdz_paczke import main as sprawdz
     return sprawdz([SRC, OUT])

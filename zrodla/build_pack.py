@@ -193,6 +193,8 @@ def main():
     dodaj_barrier(DST)
     from gen_axonguns import patch as axonguns   # broń AxonGuns: definicja axon:bron, celowanie i poza kuszy (gen_axonguns.py)
     axonguns(DST)
+    from gen_luski import patch as luski   # łuski AxonGuns axon:luska_* (gen_luski.py)
+    luski(DST)
     from sprawdz_paczke import main as sprawdz   # nie zostawiaj uszkodzonej paczki
     if sprawdz([DST]):
         raise SystemExit('paczka nie przeszła sprawdz_paczke.py')
