@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Dodatki AxonGuns widoczne na broni: tłumik, kompensator, chwyt przedni, latarka, luneta.
+"""Dodatki AxonGuns widoczne na broni: tłumik, kompensator, chwyt przedni, latarka, luneta,
+kolimator, laser, dwójnóg, powiększony magazynek i nakładka na kolbę.
 
 Każdy dodatek to osobny model ustawiony na konkretnej broni (wylot lufy, spód łoża, szyna), z tym samym
 układem współrzędnych co model broni z gen.py, więc pasuje do niego w każdym widoku. Definicja axon:bron
@@ -27,10 +28,16 @@ sys.path.insert(0, HERE)
 import gen  # noqa: E402
 from render import rot_xyz  # noqa: E402
 
-DODATKI = ['tlumik', 'kompensator', 'chwyt', 'latarka', 'luneta']
-FLAG = {'tlumik': 2, 'kompensator': 3, 'chwyt': 4, 'latarka': 5, 'luneta': 6}
+DODATKI = ['tlumik', 'kompensator', 'chwyt', 'latarka', 'luneta', 'kolimator', 'laser', 'dwojnog', 'magazynek',
+           'kolba']
+# flagi custom_model_data ustawiane przez AxonGuns (Attachment.LOOKS w tej samej kolejności, od flagi 2)
+FLAG = {d: i + 2 for i, d in enumerate(DODATKI)}
 NAZWY = {'tlumik': 'Tłumik', 'kompensator': 'Kompensator', 'chwyt': 'Chwyt przedni',
-         'latarka': 'Latarka taktyczna', 'luneta': 'Luneta 4x'}
+         'latarka': 'Latarka taktyczna', 'luneta': 'Luneta 4x', 'kolimator': 'Kolimator',
+         'laser': 'Celownik laserowy', 'dwojnog': 'Dwójnóg', 'magazynek': 'Powiększony magazynek',
+         'kolba': 'Nakładka na kolbę'}
+BEZ_CELOWANIA = {'luneta', 'kolimator'}   # w widoku przez przyrządy zasłaniałyby cel
+gen.MATS.setdefault('laser_red', dict(kind='flat', base=(214, 34, 30), wear=(250, 90, 80), edge=0.0))
 PISTOLETY = {'glock', 'makarov', 'deagle', 'sw1911', 'p30'}
 MODEL_DIR = 'assets/axon/models/dodatki/'
 TEX_DIR = 'assets/qualityarmory/textures/axon/'
@@ -102,6 +109,16 @@ def _loze(g, nazwa):
 
 def _ma_lunete(g):
     return any(e.name.startswith(('scope', 'ocular', 'obj')) for e in g.els)
+
+
+def _magazynek(g):
+    """Elementy magazynka (bez gniazda, zatrzasku i rury strzelby); pusta lista = broń bez magazynka."""
+    return [e for e in g.els if e.name.startswith('mag') and not e.name.startswith(
+        ('magwell', 'mag_release', 'mag_btn', 'mag_catch', 'mag_paddle', 'magtube', 'magcap'))]
+
+
+def _kolba(g):
+    return [e for e in g.els if e.name.startswith(('stock', 'butt'))]
 
 
 def zbuduj(nazwa, dodatek):
@@ -181,6 +198,80 @@ def zbuduj(nazwa, dodatek):
         for nm, du in (('sc_ring_f', -L / 2 + 1.0), ('sc_ring_r', L / 2 - 1.6)):
             a.cyl(nm, (uc + du, uc + du + 0.6), vc, 0.72, 'black')
             a.b(nm + '_base', (uc + du, uc + du + 0.6), (hi - 0.05, vc - 0.6), 0.42, 'black')
+    elif dodatek == 'kolimator':
+        if _ma_lunete(g) or not g.sight:
+            return None
+        rear, front = g.sight['rear'][0], g.sight['front'][0]
+        uc = rear - 0.25 * (rear - front)
+        _, hi = _profile(g, uc, 0.8)
+        L = 1.6 if pistol else 2.4
+        base = max(hi, g.sight['rear'][1] - 0.3)
+        a.b('rd_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), 0.5, 'rail')
+        a.b('rd_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.75), 0.55, 'black')
+        a.b('rd_hood_l', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (-0.55, -0.4), 'black')
+        a.b('rd_hood_r', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (0.4, 0.55), 'black')
+        a.b('rd_hood_t', (uc - L / 2, uc - L / 2 + 0.45), (base + 1.6, base + 1.8), 0.55, 'black')
+        a.b('rd_glass', (uc - L / 2 + 0.15, uc - L / 2 + 0.25), (base + 0.75, base + 1.6), 0.4, 'glass')
+        a.b('rd_dot', (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (base + 1.12, base + 1.24), 0.06, 'laser_red')
+        a.b('rd_knob', (uc + 0.1, uc + 0.6), (base + 0.4, base + 0.7), (0.55, 0.75), 'parts')
+    elif dodatek == 'laser':
+        L = 1.4 if pistol else 2.0
+        if pistol:
+            uc = u0 + 0.5 * (grip_u - u0)
+            lo, _ = _profile(g, uc)
+            vc = lo + 0.25
+            ws = _szerokosc(g, uc, vc - 0.3, vc + 0.3)
+            wc = -(ws + 0.3)
+        else:
+            lf, lb = _loze(g, nazwa)
+            uc = lf + L / 2 + 0.9
+            lo, hi = _profile(g, uc)
+            vc = max(lo + 0.6, min(0.0, hi - 0.6))
+            ws = _szerokosc(g, uc, vc - 0.5, vc + 0.5)
+            wc = -(ws + 0.45)
+        a.b('ls_mount', (uc - 0.5, uc + 0.5), (vc - 0.25, vc + 0.25), (wc + 0.2, -ws + 0.05), 'rail')
+        a.b('ls_body', (uc - L / 2, uc + L / 2), (vc - 0.32, vc + 0.32), (wc - 0.3, wc + 0.3), 'tan')
+        a.b('ls_lens', (uc - L / 2 - 0.08, uc - L / 2), (vc - 0.12, vc + 0.12), (wc - 0.12, wc + 0.12), 'laser_red')
+        a.b('ls_btn', (uc + L / 2 - 0.4, uc + L / 2 - 0.1), (vc + 0.32, vc + 0.45), (wc - 0.15, wc + 0.15), 'rubber')
+    elif dodatek == 'dwojnog':
+        if pistol or any(e.name.startswith('bipod') for e in g.els):
+            return None
+        lf, lb = _loze(g, nazwa)
+        uc = lf + 0.6
+        lo, _ = _profile(g, uc)
+        a.b('bp_mount', (uc - 0.7, uc + 0.7), (lo - 0.45, lo + 0.05), 0.6, 'rail')
+        a.b('bp_hinge', (uc - 0.4, uc + 0.4), (lo - 0.75, lo - 0.45), 0.75, 'parts')
+        for side in (-1, 1):
+            a.b('bp_leg%d' % (side + 1), (uc + 0.2, uc + 6.0), (lo - 0.8, lo - 0.5), (side * 0.75 - 0.15, side * 0.75 + 0.15),
+                'black')
+            a.b('bp_foot%d' % (side + 1), (uc + 5.8, uc + 6.4), (lo - 0.95, lo - 0.45), (side * 0.75 - 0.2, side * 0.75 + 0.2),
+                'rubber')
+    elif dodatek == 'magazynek':
+        mag = _magazynek(g)
+        if not mag or any(e.name.startswith('drum') for e in g.els):
+            return None
+        low = min(mag, key=lambda e: e.lo[1])
+        v0 = low.lo[1]
+        du = 0.25 if pistol else 0.5        # dół magazynka zwykle jest pochylony do przodu
+        H = 1.2 if pistol else 2.2
+        w = max(abs(low.lo[0]), abs(low.hi[0]))
+        a.b('xm_body', (low.lo[2] - du, low.hi[2] - du), (v0 - H, v0 + 0.05), w, 'magsteel')
+        a.b('xm_rib', (low.lo[2] - du + 0.3, low.hi[2] - du - 0.3), (v0 - H + 0.4, v0 - 0.3), w + 0.04, 'magsteel')
+        a.b('xm_plate', (low.lo[2] - du - 0.15, low.hi[2] - du + 0.15), (v0 - H - 0.3, v0 - H), w + 0.1, 'polymer')
+        a.b('xm_tab', (low.hi[2] - du - 0.2, low.hi[2] - du + 0.35), (v0 - H - 0.25, v0 - H + 0.15), w * 0.6, 'rubber')
+    elif dodatek == 'kolba':
+        st = _kolba(g)
+        if pistol or not st:
+            return None
+        ue = max(e.hi[2] for e in st)
+        rear = [e for e in st if e.hi[2] >= ue - 2.5]
+        top = max(e.hi[1] for e in rear)
+        bot = min(e.lo[1] for e in rear)
+        w = max(max(abs(e.lo[0]), abs(e.hi[0])) for e in rear)
+        a.b('ck_riser', (ue - 5.0, ue - 1.0), (top - 0.05, top + 0.55), w * 0.85, 'polymer')
+        a.b('ck_strap_f', (ue - 4.6, ue - 4.2), (top - 0.4, top + 0.6), w + 0.08, 'band')
+        a.b('ck_strap_r', (ue - 1.8, ue - 1.4), (top - 0.4, top + 0.6), w + 0.08, 'band')
+        a.b('ck_pad', (ue - 0.05, ue + 0.55), (bot - 0.1, top + 0.1), w + 0.1, 'rubber')
     if not a.els:
         return None
     return a
@@ -253,12 +344,13 @@ def pliki(z, warianty, bronie):
             out[MODEL_DIR + '%s_%s.json' % (nazwa, dod)] = (json.dumps(model, indent=1) + '\n').encode()
             out[TEX_DIR + 'dod_%s_%s.png' % (nazwa, dod)] = _png(img)
             for wariant, disp in w.items():
-                if dod == 'luneta' and wariant.startswith('cel'):
+                if dod in BEZ_CELOWANIA and wariant.startswith('cel'):
                     continue          # celowanie idzie przez przyrządy broni; luneta zasłaniałaby widok
                 child = {'parent': 'axon:dodatki/%s_%s' % (nazwa, dod), 'display': disp}
                 out[MODEL_DIR + '%s/%s_%s.json' % (wariant, nazwa, dod)] = (json.dumps(child, indent=1) + '\n').encode()
             dostepne[(nazwa, dod)] = True
-            if nazwa == PRZEDMIOT or (dod == 'luneta' and (PRZEDMIOT, dod) not in dostepne):
+            if nazwa == PRZEDMIOT or ((PRZEDMIOT, dod) not in dostepne
+                                      and 'assets/axon/items/dodatek_%s.json' % dod not in out):
                 item = dict(model)
                 item['display'] = _wycentrowany(model)
                 out['assets/axon/models/item/dodatek_%s.json' % dod] = (json.dumps(item, indent=1) + '\n').encode()
@@ -274,7 +366,7 @@ def nakladki(nazwa_broni, wariant, dostepne):
     for dod in DODATKI:
         if not dostepne.get((baza, dod)):
             continue
-        if dod == 'luneta' and wariant.startswith('cel'):
+        if dod in BEZ_CELOWANIA and wariant.startswith('cel'):
             continue
         out.append({'type': 'minecraft:condition', 'property': 'minecraft:custom_model_data', 'index': FLAG[dod],
                     'on_true': {'type': 'minecraft:model', 'model': 'axon:dodatki/%s/%s_%s' % (wariant, baza, dod)},

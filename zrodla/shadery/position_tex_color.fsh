@@ -9,6 +9,8 @@ in vec2 texCoord0;
 in vec4 vertexColor;
 in vec2 axonGui;
 flat in int axonHide;
+flat in int axonGunMenu;
+in vec3 axonGunPos;
 
 out vec4 fragColor;
 
@@ -43,6 +45,18 @@ bool axonInHud(vec2 pos, vec2 size, float hudHeight) {
 
 void main() {
     if (axonHide == 1 && axonInHud(axonGui, axonGuiSize(ProjMat), 70.0)) {
+        discard;
+    }
+    if (axonGunMenu == 1 && textureSize(Sampler0, 0) == ivec2(256, 256)) {
+        vec4 marker = texelFetch(Sampler0, ivec2(255, 255), 0) * 255.0;
+        if (all(lessThan(abs(marker - vec4(1.0, 2.0, 3.0, 4.0)), vec4(0.5)))) {
+            discard;
+        }
+    }
+    // Menu broni: bez białego podświetlenia martwych slotów (kolumny 1–7, wiersze 0–4) nad bronią.
+    // Dymki (z ≥ 400) zostają. Układ jak w gen_menu_broni.py i MenuLayout.
+    if (axonGunMenu == 1 && axonGunPos.z < 350.0 && axonGunPos.x > 26.0 && axonGunPos.x < 150.0
+            && axonGunPos.y > 18.0 && axonGunPos.y < 106.0) {
         discard;
     }
     vec4 color = texture(Sampler0, texCoord0) * vertexColor;
