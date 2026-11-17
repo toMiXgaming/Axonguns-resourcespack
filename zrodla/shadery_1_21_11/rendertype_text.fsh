@@ -1100,125 +1100,119 @@ vec4 axonUiBox() {
 
     if (style == 9) {
         float f = 1.0 - clamp(p.x / max(size.x, 1.0), 0.0, 1.0);
-        return vec4(mix(vec3(0.3), AXON_UI_ACC, f), 0.5 * f * inside);
+        float m = 1.0 - smoothstep(0.0, 1.0, abs(p.y - 0.5) - 0.2);
+        return vec4(mix(vec3(0.5), AXON_UI_ACC, f), 0.45 * f * m * step(0.0, p.x) * step(p.x, size.x));
     }
 
     bool button = style == 3 || style == 4 || style == 5 || style == 7;
     bool hot = button && state != 2 && cur.x >= 0.0 && cur.y >= 0.0 && cur.x < size.x && cur.y < size.y;
-
-    // cień: okno szeroki i miękki, przyciski płytkie; najechany przycisk „unosi się”
-    vec4 under = vec4(0.0);
-    if (style == 1) {
-        float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, 4.0), size * 0.5, r + 2.0);
-        under = vec4(0.0, 0.0, 0.0, 0.5 * (1.0 - smoothstep(-4.0, 10.0, ds)));
-    } else if (button && (style != 3 || hot || lit)) {
-        float lift = hot ? 3.0 : 1.5;
-        float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, lift), size * 0.5, r + 1.0);
-        under = vec4(0.0, 0.0, 0.0, (hot ? 0.4 : 0.2) * (1.0 - smoothstep(-2.0, 5.0, ds)));
-    }
-    if (hot) {
-        under = axonUiOver(vec4(AXON_UI_ACC, 0.2 * (1.0 - smoothstep(0.0, 8.0, d))), under);
-    }
-    if (inside <= 0.0) {
-        return under;
-    }
-
     float v = clamp(p.y / size.y, 0.0, 1.0);
-    vec3 col;
-    float alpha;
-    float rimTop = 0.30, rimBottom = 0.07;
+
     if (style == 1) {
-        // szkło: półprzezroczyste, jaśniejsze u góry, poświata akcentu w rogu
-        col = mix(vec3(0.075, 0.085, 0.105), vec3(0.04, 0.045, 0.058), v);
-        col += AXON_UI_ACC * 0.07 * (1.0 - smoothstep(0.0, 300.0, length(p - vec2(30.0, 0.0))));
-        alpha = mix(0.62, 0.74, v);
-        rimTop = 0.38;
-        rimBottom = 0.06;
-        // nagłówek: jaśniejszy pas z poświatą akcentu i linią, po której przesuwa się błysk
-        float head = 1.0 - smoothstep(56.0, 60.0, p.y);
-        col = mix(col, col + vec3(0.035) + AXON_UI_ACC * 0.05 * (1.0 - p.x / size.x), head);
-        float line = 1.0 - smoothstep(0.4, 1.2, abs(p.y - 58.0));
-        float shine = pow(0.5 + 0.5 * sin(t * 1.2 - p.x * 0.018), 6.0);
-        float fade = 1.0 - clamp(p.x / size.x, 0.0, 1.0) * 0.75;
-        col = mix(col, mix(AXON_UI_ACC, vec3(1.0), shine * 0.6), line * 0.75 * fade);
-        // drobna siatka kropek w części z treścią
-        vec2 g = mod(p + vec2(3.0), 14.0) - 7.0;
-        col += vec3(0.035) * (1.0 - smoothstep(0.5, 1.1, length(g))) * (1.0 - head);
-    } else if (style == 2) {
-        col = vec3(0.0);
-        alpha = 0.18;
-        rimTop = 0.08;
-        rimBottom = 0.03;
+        // szyna: ciemne szkło przy lewej krawędzi, jasna linia po prawej, poświata akcentu pod tytułem
+        if (p.x < 0.0 || p.y < 0.0 || p.y > size.y) return vec4(0.0);
+        if (p.x > size.x) {
+            // miękki cień szyny na świecie
+            return vec4(0.0, 0.0, 0.0, 0.35 * (1.0 - smoothstep(0.0, 10.0, p.x - size.x)));
+        }
+        vec3 col = mix(vec3(0.05, 0.055, 0.07), vec3(0.03, 0.033, 0.042), v);
+        col += AXON_UI_ACC * 0.09 * (1.0 - smoothstep(0.0, 160.0, length(p - vec2(20.0, 20.0))));
+        float edge = 1.0 - smoothstep(0.0, 1.0, size.x - p.x);
+        col = mix(col, vec3(0.3, 0.33, 0.38), edge * 0.8);
+        // linia pod tytułem z błyskiem
+        float line = (1.0 - smoothstep(0.3, 1.0, abs(p.y - 40.5))) * step(12.0, p.x) * step(p.x, size.x - 12.0);
+        float shine = pow(0.5 + 0.5 * sin(t * 1.1 - p.x * 0.03), 8.0);
+        col = mix(col, mix(vec3(0.25), AXON_UI_ACC, 0.5 + 0.5 * shine), line * 0.8);
+        return vec4(col, 0.9);
+    }
+
+    vec4 under = vec4(0.0);
+    vec3 col = vec3(0.0);
+    float alpha = 0.0;
+
+    if (style == 2) {
+        // karta szczegółów: szkło z jasną górną krawędzią
+        float ds = axonRoundBox(p - size * 0.5 - vec2(0.0, 3.0), size * 0.5, r + 2.0);
+        under = vec4(0.0, 0.0, 0.0, 0.4 * (1.0 - smoothstep(-3.0, 9.0, ds)));
+        col = mix(vec3(0.075, 0.082, 0.1), vec3(0.045, 0.05, 0.062), v);
+        col += AXON_UI_ACC * 0.06 * (1.0 - smoothstep(0.0, 120.0, length(p - vec2(26.0, 24.0))));
+        alpha = 0.86;
+        float rim = 1.0 - smoothstep(0.0, 1.2, -d);
+        col = mix(col, vec3(1.0), rim * mix(0.22, 0.05, v));
+        alpha = max(alpha, rim * mix(0.22, 0.05, v));
     } else if (style == 3) {
-        // karta: bez tła, dopóki nie jest aktywna albo najechana
-        col = lit ? mix(vec3(0.1, 0.12, 0.14), AXON_UI_ACC, 0.2) : vec3(0.16, 0.17, 0.2);
-        alpha = lit ? 0.85 : (hot ? 0.75 : 0.0);
-        rimTop = lit || hot ? 0.25 : 0.0;
-        rimBottom = lit || hot ? 0.06 : 0.0;
+        // karta pluginu: aktywna ma gradient akcentu od lewej i pasek; najechana jasne tło
+        if (lit) {
+            float g = 1.0 - clamp(p.x / size.x, 0.0, 1.0);
+            col = mix(vec3(0.08, 0.09, 0.1), AXON_UI_ACC, 0.18 + 0.12 * g);
+            alpha = 0.3 + 0.55 * g;
+        }
+        if (hot) {
+            col = lit ? col + vec3(0.04) : vec3(0.2, 0.21, 0.24);
+            alpha = max(alpha, 0.55);
+        }
+        if (lit) {
+            float pulse = 0.85 + 0.15 * sin(t * 2.2);
+            float bar = axonRect(p, 0.0, 5.0, 2.5, size.y - 10.0, 1.25);
+            float m = 1.0 - smoothstep(-aa, aa, bar);
+            col = mix(col, AXON_UI_ACC * pulse + vec3(0.06), m);
+            alpha = max(alpha, m);
+        }
     } else if (style == 4) {
-        col = lit ? mix(vec3(0.12, 0.14, 0.16), AXON_UI_ACC, 0.32) : vec3(0.1, 0.11, 0.135);
-        alpha = 0.85;
-    } else if (style == 6) {
-        col = vec3(0.03, 0.035, 0.045);
-        alpha = 0.55;
-        rimTop = 0.1;
-        rimBottom = 0.04;
-    } else if (style == 10) {
-        col = state == 2 ? vec3(0.35, 0.1, 0.1) : mix(vec3(0.08, 0.1, 0.11), AXON_UI_ACC, 0.18);
-        alpha = 0.9;
-    } else {
-        col = mix(vec3(0.15, 0.16, 0.19), vec3(0.11, 0.12, 0.145), v);
-        alpha = 0.7;
-        if (lit) col = mix(col, AXON_UI_ACC, 0.08);
-    }
-    if (state == 2 && style != 10) {
-        col *= 0.75;
-        alpha *= 0.7;
-    }
-    if (hot) {
-        alpha = max(alpha, 0.85);
-        col += vec3(0.05);
-        // światło podążające za kursorem
-        col += AXON_UI_ACC * 0.14 * (1.0 - smoothstep(0.0, 80.0, length(p - cur)));
-    }
-
-    // obwódka 1 px: jasna u góry, ciemniejsza u dołu; akcent przy najechaniu
-    float rim = 1.0 - smoothstep(0.0, 1.2, -d);
-    float rimA = mix(rimTop, rimBottom, v);
-    vec3 rimCol = vec3(1.0);
-    if (style == 1) {
-        // obwódka okna: akcent wędruje dookoła
-        vec2 rc = p - size * 0.5;
-        float sweep = 0.5 + 0.5 * cos(atan(rc.y, rc.x * size.y / size.x) - t * 0.6);
-        rimCol = mix(vec3(1.0), AXON_UI_ACC, pow(sweep, 3.0));
-        rimA = mix(rimA, 0.75, pow(sweep, 3.0));
-    }
-    if (hot) {
-        rimCol = AXON_UI_ACC;
-        rimA = 0.9;
-    } else if (lit && style != 1) {
-        rimCol = AXON_UI_ACC;
-        rimA = max(rimA, 0.45);
-    }
-    col = mix(col, rimCol, rim * rimA);
-    alpha = max(alpha, rim * rimA);
-
-    // aktywna karta / kafel: pasek akcentu z lewej, delikatnie pulsuje
-    if (lit && (style == 3 || style == 5)) {
-        float pulse = 0.85 + 0.15 * sin(t * 2.2);
-        float bar = axonRect(p, 0.0, size.y * 0.5 - 7.0, 3.0, 14.0, 1.5);
-        float m = 1.0 - smoothstep(-aa, aa, bar);
-        col = mix(col, AXON_UI_ACC * pulse + vec3(0.05), m);
+        // zakładka: tekst nad podkreśleniem; aktywna ma pełne podkreślenie akcentu
+        if (hot) {
+            col = vec3(0.2, 0.21, 0.24);
+            alpha = 0.45;
+        }
+        float ul = axonRect(p, 6.0, size.y - 2.0, size.x - 12.0, 2.0, 1.0);
+        float m = (1.0 - smoothstep(-aa, aa, ul)) * (lit ? 1.0 : (hot ? 0.45 : 0.0));
+        col = mix(col, lit ? AXON_UI_ACC : vec3(0.6), m);
         alpha = max(alpha, m);
-    }
-    // zamknij: krzyżyk, czerwony przy najechaniu
-    if (style == 7) {
+        if (lit) {
+            under = vec4(AXON_UI_ACC, 0.25 * (1.0 - smoothstep(0.0, 5.0, ul)));
+        }
+    } else if (style == 5) {
+        // wiersz: przezroczysty z cienką linią pod spodem; najechany ma jasne tło, pasek i światło pod kursorem
+        float sep = (1.0 - smoothstep(0.2, 0.9, abs(p.y - (size.y - 0.5)))) * step(30.0, p.x) * step(p.x, size.x - 4.0);
+        col = vec3(1.0);
+        alpha = 0.06 * sep;
+        if (hot) {
+            col = vec3(0.22, 0.24, 0.27) + AXON_UI_ACC * 0.12 * (1.0 - smoothstep(0.0, 90.0, length(p - cur)));
+            alpha = 0.55 * inside;
+            float bar = axonRect(p, 0.0, 5.0, 2.0, size.y - 10.0, 1.0);
+            float m = 1.0 - smoothstep(-aa, aa, bar);
+            col = mix(col, AXON_UI_ACC, m);
+            alpha = max(alpha, m);
+            float rim = (1.0 - smoothstep(0.0, 1.0, -d)) * inside;
+            col = mix(col, AXON_UI_ACC, rim * 0.35);
+            alpha = max(alpha, rim * 0.35);
+        }
+        if (state == 2) alpha *= 0.5;
+        return vec4(col, alpha);
+    } else if (style == 6) {
+        // klawisz: nakładka z grubszym dołem
+        float body = axonRoundBox(p - vec2(size.x * 0.5, size.y * 0.5 - 0.75), vec2(size.x * 0.5, size.y * 0.5 - 0.75), r);
+        float base = d;
+        col = mix(vec3(0.07, 0.075, 0.09), vec3(0.24, 0.25, 0.29), 1.0 - smoothstep(-aa, aa, body));
+        col = mix(col, vec3(0.32, 0.34, 0.38), (1.0 - smoothstep(0.0, 1.0, -body)) * (1.0 - v) * 0.8);
+        alpha = 0.95;
+        inside = 1.0 - smoothstep(-aa, aa, base);
+    } else if (style == 7) {
+        col = vec3(0.14, 0.15, 0.18);
+        alpha = hot ? 0.9 : 0.55;
+        if (hot) col = vec3(0.32, 0.12, 0.12);
         vec2 c = size * 0.5;
         float x = min(axonSegment(p, c - vec2(4.0), c + vec2(4.0)), axonSegment(p, c + vec2(-4.0, 4.0), c + vec2(4.0, -4.0)));
-        vec3 xc = hot ? vec3(1.0, 0.45, 0.42) : vec3(0.85, 0.87, 0.9);
         float m = 1.0 - smoothstep(0.85 - aa, 0.85 + aa, x);
-        col = mix(col, xc, m);
+        col = mix(col, hot ? vec3(1.0, 0.6, 0.58) : vec3(0.82, 0.84, 0.88), m);
         alpha = max(alpha, m);
+        float rim = 1.0 - smoothstep(0.0, 1.2, -d);
+        col = mix(col, vec3(1.0), rim * 0.12);
+    } else if (style == 10) {
+        col = state == 2 ? vec3(0.35, 0.1, 0.1) : mix(vec3(0.07, 0.09, 0.1), AXON_UI_ACC, 0.16);
+        alpha = 0.88;
+        float rim = 1.0 - smoothstep(0.0, 1.2, -d);
+        col = mix(col, state == 2 ? vec3(1.0, 0.45, 0.4) : AXON_UI_ACC, rim * 0.45);
     }
     return axonUiOver(vec4(col, alpha * inside), under);
 }
@@ -1320,7 +1314,7 @@ void main() {
         if (texelFetch(Sampler0, axonTp, 0).a < 0.5) {
             vec2 e = mapPixel / vec2(640.0, 384.0) - 0.5;
             float vig = smoothstep(0.2, 0.75, length(e * vec2(1.15, 1.0)));
-            fragColor = vec4(0.015, 0.02, 0.03, 0.35 + 0.3 * vig);
+            fragColor = vec4(0.015, 0.02, 0.03, 0.5 + 0.25 * vig);
             return;
         }
 

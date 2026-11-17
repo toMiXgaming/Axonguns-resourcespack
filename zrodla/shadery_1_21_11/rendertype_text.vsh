@@ -605,15 +605,15 @@ bool axonMiniVertex() {
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
     vec4(0.0, 0.0, 0.0, -0.9920),
-    vec4(608.0, 356.0, 14.0, -0.9905),   // 1 panel okna
-    vec4(164.0, 284.0, 10.0, -0.9910),   // 2 pasek kart
-    vec4(148.0, 28.0, 8.0, -0.9920),     // 3 karta
-    vec4(124.0, 20.0, 10.0, -0.9920),    // 4 zakładka (pigułka)
-    vec4(204.0, 40.0, 9.0, -0.9920),     // 5 kafel ustawienia
-    vec4(416.0, 36.0, 9.0, -0.9915),     // 6 opis pod kursorem
-    vec4(26.0, 22.0, 8.0, -0.9920),      // 7 zamknij
+    vec4(176.0, 384.0, 0.0, -0.9905),    // 1 szyna z kartami (lewa krawędź ekranu)
+    vec4(172.0, 292.0, 10.0, -0.9910),   // 2 karta szczegółów
+    vec4(160.0, 26.0, 6.0, -0.9920),     // 3 karta pluginu w szynie
+    vec4(104.0, 22.0, 6.0, -0.9920),     // 4 zakładka (podkreślenie)
+    vec4(244.0, 26.0, 5.0, -0.9920),     // 5 wiersz ustawienia
+    vec4(30.0, 13.0, 3.0, -0.9925),      // 6 klawisz
+    vec4(26.0, 22.0, 7.0, -0.9920),      // 7 zamknij
     vec4(20.0, 20.0, 0.0, -0.9990),      // 8 kursor
-    vec4(416.0, 2.0, 1.0, -0.9915),      // 9 linia
+    vec4(146.0, 1.0, 0.5, -0.9915),      // 9 linia
     vec4(140.0, 16.0, 8.0, -0.9920),     // 10 plakietka
     vec4(30.0, 16.0, 8.0, -0.9930),      // 11 przełącznik (stan 1 = włączony)
     vec4(22.0, 22.0, 0.0, -0.9930),      // 12 ikona: mapa (kompas)
