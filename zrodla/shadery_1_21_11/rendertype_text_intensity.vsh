@@ -20,7 +20,7 @@ out vec2 texCoord0;
 // Napisy okna UI AxonItems (/ustawienia) w czcionce Inter (axon:ui, TTF). Glify TTF są w teksturze
 // jednokanałowej, więc klient rysuje je tym shaderem, a nie rendertype_text. Pozycja jak w axonUiVertex
 // z rendertype_text.vsh (alfa 253, odległość w widoku ~AXON_UI_DEPTH, otwarte pełne GUI).
-#define AXON_UI_DEPTH 16.0
+#define AXON_UI_DEPTH 1.0
 #define AXON_UI_UNIT 0.25
 #define AXON_UI_ANIM 100.0   // jak w rendertype_text.vsh; napisy mają warstwę AXON_UI_DEPTH
 #define AXON_HUD_TIME 12000.0
@@ -36,7 +36,7 @@ bool axonUiLabel() {
     }
     vec4 view = ModelViewMat * vec4(Position, 1.0);
     float az = abs(view.z);
-    if (az < AXON_UI_DEPTH - 3.0 || az > AXON_UI_DEPTH + AXON_UI_ANIM + 20.0) {
+    if (az > AXON_UI_DEPTH + AXON_UI_ANIM + 20.0) {
         return false;
     }
     float show = 1.0 - clamp((az - AXON_UI_DEPTH) / AXON_UI_ANIM, 0.0, 1.0);
