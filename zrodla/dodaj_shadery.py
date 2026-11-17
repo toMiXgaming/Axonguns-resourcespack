@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 ZIPS = ['QualityArmory-21-axon.zip', 'QualityArmory-21-axon-1.21.11.zip']
 CORE = '/assets/minecraft/shaders/core/'
+INCLUDE = '/assets/minecraft/shaders/include/'
 
 
 def shader_files():
@@ -28,7 +29,9 @@ def shader_files():
         files['axon_shadery' + CORE + name] = data
         files['axon_shadery_1_21_0' + CORE + name] = data.replace(b'"minecraft:core/', b'"').replace(b'<minecraft:', b'<')
     for name in sorted(os.listdir(os.path.join(HERE, 'shadery_1_21_11'))):
-        files['axon_shadery_1_21_11' + CORE + name] = open(os.path.join(HERE, 'shadery_1_21_11', name), 'rb').read()
+        # *.glsl to wspólne kawałki (#moj_import <minecraft:...>), muszą leżeć w shaders/include
+        folder = INCLUDE if name.endswith('.glsl') else CORE
+        files['axon_shadery_1_21_11' + folder + name] = open(os.path.join(HERE, 'shadery_1_21_11', name), 'rb').read()
     files['pack.mcmeta'] = open(os.path.join(HERE, 'pack.mcmeta'), 'rb').read()
     return files
 
