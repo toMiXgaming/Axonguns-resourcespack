@@ -554,12 +554,10 @@ Pikselowe plakietki rang (żeton z ikoną i tabliczka z nazwą) jako znaki czcio
 | Znak | Plik | Napis |
 |---|---|---|
 | U+EC00 | `wlasciciel` | WŁAŚCICIEL |
-| U+EC01 | `admin` | ADMIN |
-| U+EC02 | `moderator` | MOD |
-| U+EC03 | `pomocnik` | POMOCNIK |
-| U+EC04 | `budowniczy` | BUDOWNICZY |
-| U+EC05 | `elita` | ELITA |
-| U+EC06 | `vip` | VIP |
-| U+EC07 | `gracz` | OCALAŁY |
+| U+EC01 | `moderator` | MOD |
+| U+EC02 | `pomocnik` | POMOCNIK |
+| U+EC03 | `elita` | ELITA |
+| U+EC04 | `vip` | VIP |
+| U+EC05 | `gracz` | OCALAŁY |
 
 Zakres U+EC00–U+EC1F jest zarezerwowany na plakietki. Nowa ranga: wpis w `RANGI` (znak, napis, ikona, kolory), ikona 10×10 kropek w `ICONS`. Znaki trafiają do tego samego `default.json` co tablica (`tablica.pliki()`), więc `build_pack.py` i `dodaj_tablice.py` biorą je same. Podgląd: `python3 zrodla/preview_rangi.py` → `podglady/rangi-czat.png`.

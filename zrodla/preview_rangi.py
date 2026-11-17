@@ -12,10 +12,8 @@ S = 3   # skala GUI: 1 px GUI = 3 px ekranu = 1 px obrazka plakietki
 
 CZAT = [
     ('wlasciciel', 'Tomek', 'witajcie na Axoncore!'),
-    ('admin', 'Blaze_Kid', 'restart serwera za 5 minut'),
     ('moderator', 'Frostbyte', 'bez spamu na czacie'),
     ('pomocnik', 'Redstoner', 'warsztat jest pod /warp baza'),
-    ('budowniczy', 'Sky_Sailor', 'nowa struktura gotowa'),
     ('elita', 'Lord_Pebble', 'kto idzie na zrzut?'),
     ('vip', 'PixelPanda', 'ja! czekajcie przy oazie'),
     ('gracz', 'Moonwalker', 'gdzie znajde siarke?'),
