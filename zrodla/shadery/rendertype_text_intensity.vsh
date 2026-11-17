@@ -23,7 +23,7 @@ out vec2 texCoord0;
 // z rendertype_text.vsh (alfa 253, odległość w widoku ~AXON_UI_DEPTH, otwarte pełne GUI).
 #define AXON_UI_DEPTH 16.0
 #define AXON_UI_UNIT 0.25
-#define AXON_UI_ANIM 0.8
+#define AXON_UI_ANIM 100.0   // jak w rendertype_text.vsh; napisy mają warstwę AXON_UI_DEPTH
 #define AXON_HUD_TIME 12000.0
 #define AXON_HUD_WINDOW 60.0
 
@@ -36,11 +36,11 @@ bool axonUiLabel() {
         return false;
     }
     vec4 view = ModelViewMat * vec4(Position, 1.0);
-    if (abs(abs(view.z) - AXON_UI_DEPTH) > 3.0) {
+    float az = abs(view.z);
+    if (az < AXON_UI_DEPTH - 3.0 || az > AXON_UI_DEPTH + AXON_UI_ANIM + 20.0) {
         return false;
     }
-    float az = abs(view.z);
-    float show = 1.0 - clamp((az - floor(az + 0.05)) / AXON_UI_ANIM, 0.0, 1.0);
+    float show = 1.0 - clamp((az - AXON_UI_DEPTH) / AXON_UI_ANIM, 0.0, 1.0);
     show = show * show * (3.0 - 2.0 * show);   // pojawianie się, jak w rendertype_text.vsh
     vec2 px = vec2(320.0 + view.x / AXON_UI_UNIT, 192.0 - view.y / AXON_UI_UNIT + 6.0 * (1.0 - show));
     gl_Position = vec4(px.x / 320.0 - 1.0, 1.0 - px.y / 192.0, -0.9960, 1.0);
