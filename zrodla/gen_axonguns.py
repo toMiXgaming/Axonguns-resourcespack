@@ -31,6 +31,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from render import rot_axis, rot_xyz, arm_pose_world, CROSSBOW_R  # noqa: E402
+import gen_dodatki  # noqa: E402
 
 ITEM = 'assets/axon/items/bron.json'
 CROSSBOW = 'assets/minecraft/items/crossbow.json'
@@ -175,19 +176,23 @@ def bronie(z):
     return out
 
 
-def _dispatch(guns, wariant):
+def _dispatch(guns, wariant, dostepne=None):
     entries = []
     for cmd, ref in guns:
-        model = 'axon:bron/%s/%s' % (wariant, ref.split('/')[-1])
-        entries.append({'threshold': OFFSET + cmd, 'model': {'type': 'minecraft:model', 'model': model}})
+        name = ref.split('/')[-1]
+        model = {'type': 'minecraft:model', 'model': 'axon:bron/%s/%s' % (wariant, name)}
+        dod = gen_dodatki.nakladki(name, wariant, dostepne or {})
+        if dod:
+            model = {'type': 'minecraft:composite', 'models': [model] + dod}
+        entries.append({'threshold': OFFSET + cmd, 'model': model})
     return {'type': 'minecraft:range_dispatch', 'property': 'minecraft:custom_model_data', 'index': 0,
             'fallback': FALLBACK, 'entries': entries}
 
 
-def _cel_albo(guns, cel, biodro):
+def _cel_albo(guns, cel, biodro, dostepne=None):
     """Shift zawsze celuje; PPM celuje tylko przy fladze 0 (sterowanie „lpm”)."""
-    hip = _dispatch(guns, biodro)
-    ads = _dispatch(guns, cel)
+    hip = _dispatch(guns, biodro, dostepne)
+    ads = _dispatch(guns, cel, dostepne)
     return {'type': 'minecraft:condition', 'property': 'minecraft:keybind_down', 'keybind': 'key.sneak',
             'on_true': ads,
             'on_false': {'type': 'minecraft:condition', 'property': 'minecraft:custom_model_data', 'index': 0,
@@ -196,10 +201,10 @@ def _cel_albo(guns, cel, biodro):
                          'on_false': hip}}
 
 
-def definicja(guns):
+def definicja(guns, dostepne=None):
     return {'model': {'type': 'minecraft:condition', 'property': 'minecraft:custom_model_data', 'index': 1,
-                      'on_true': _cel_albo(guns, 'cel_u', 'biodro_u'),
-                      'on_false': _cel_albo(guns, 'cel', 'biodro')}}
+                      'on_true': _cel_albo(guns, 'cel_u', 'biodro_u', dostepne),
+                      'on_false': _cel_albo(guns, 'cel', 'biodro', dostepne)}}
 
 
 # Luneta przy celowaniu (wariant „cel” to pełny model zamiast samego display):
@@ -274,7 +279,9 @@ def pliki(z):
                     full['display'] = dict(display, **disp)
                     model = full
             out[PREFIX + '%s/%s.json' % (wariant, name)] = (json.dumps(model, indent=1) + '\n').encode()
-    out[ITEM] = (json.dumps(definicja(guns), indent=1) + '\n').encode()
+    dod, dostepne = gen_dodatki.pliki(z, warianty, guns)
+    out.update(dod)
+    out[ITEM] = (json.dumps(definicja(guns, dostepne), indent=1) + '\n').encode()
     # 1.21-1.21.3: bez definicji przedmiotów; 1.21.2-1.21.3 czytają item_model jako models/item/bron,
     # 1.21-1.21.1 widzą zwykłą kuszę z numerem 10000+n. Tam tylko model biodra.
     if OLD_CROSSBOW in names:
@@ -296,7 +303,7 @@ def patch(path):
     tmp = path + '.tmp'
     with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
         for i in zin.infolist():
-            if i.filename in files or i.filename.startswith(PREFIX):
+            if i.filename in files or i.filename.startswith((PREFIX, gen_dodatki.MODEL_DIR)):
                 continue
             zout.writestr(i, zin.read(i.filename))
         for fn, data in sorted(files.items()):
