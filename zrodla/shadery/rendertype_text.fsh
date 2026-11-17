@@ -1063,6 +1063,14 @@ vec4 axonUiBox() {
     float t = GameTime * 24000.0 / 20.0;
     bool lit = state == 1 || state == 3;
 
+    if (style == 0) {
+        // szyba: jak przezroczyste piksele mapy, ale w tym samym napisie co pudełka,
+        // więc jest też pod ich cieniami i półprzezroczystymi brzegami
+        vec2 e = (axonHudExtra.xy + p) / vec2(640.0, 384.0) - 0.5;
+        float vig = smoothstep(0.2, 0.75, length(e * vec2(1.15, 1.0)));
+        return vec4(0.015, 0.02, 0.03, 0.5 + 0.25 * vig);
+    }
+
     if (style >= 12) {
         float v0 = clamp(p.y / size.y, 0.0, 1.0);
         float gd = axonUiIcon(style, p - (size - 16.0) * 0.5);

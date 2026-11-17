@@ -604,7 +604,7 @@ bool axonMiniVertex() {
 #define AXON_UI_STYLES 32
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
-    vec4(0.0, 0.0, 0.0, -0.9920),
+    vec4(640.0, 384.0, 0.0, -0.9900),    // 0 przyciemniona szyba (cały ekran, rysowana pierwsza)
     vec4(176.0, 384.0, 0.0, -0.9905),    // 1 szyna z kartami (lewa krawędź ekranu)
     vec4(172.0, 292.0, 10.0, -0.9910),   // 2 karta szczegółów
     vec4(160.0, 26.0, 6.0, -0.9920),     // 3 karta pluginu w szynie
@@ -677,7 +677,7 @@ bool axonUiVertex() {
     vec2 cur = axonCursor * vec2(640.0, 384.0);
     int vc = gl_VertexID % 4;
     vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
-    float pad = style == 11 ? 2.0 : (style >= 12 ? 7.0 : 10.0);
+    float pad = style == 0 ? 0.0 : (style == 11 ? 2.0 : (style >= 12 ? 7.0 : 10.0));
     if (style == 8) {
         org = cur - vec2(3.0);
         pad = 0.0;
