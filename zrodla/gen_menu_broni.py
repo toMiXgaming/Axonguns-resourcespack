@@ -152,6 +152,15 @@ def etykieta(text):
     return img
 
 
+def _full_width(img, cell):
+    """Klient liczy szerokość glifu bitmapowego do ostatniej kolumny z niezerową alfą. Piksel o alfie 1
+    w prawym górnym rogu każdej komórki daje stałą szerokość (= stały odstęp) i jest niewidoczny."""
+    for x in range(cell - 1, img.width, cell):
+        if img.getpixel((x, 0))[3] == 0:
+            img.putpixel((x, 0), (0, 0, 0, 1))
+    return img
+
+
 def _png(img):
     out = io.BytesIO()
     img.save(out, 'PNG', optimize=True)
@@ -193,9 +202,9 @@ def pliki(generic_54=None):
     img = tlo()
     for r in range(ROWS):
         row = img.crop((0, r * TILE * S, COLS * TILE * S, (r + 1) * TILE * S))
-        files['assets/axon/textures/font/bron_menu/tlo_%d.png' % r] = _png(row)
+        files['assets/axon/textures/font/bron_menu/tlo_%d.png' % r] = _png(_full_width(row, TILE * S))
     for mode, text in MODES:
-        files['assets/axon/textures/font/bron_menu/tryb_%s.png' % mode] = _png(etykieta(text))
+        files['assets/axon/textures/font/bron_menu/tryb_%s.png' % mode] = _png(_full_width(etykieta(text), TILE * S))
     files['assets/axon/font/bron_menu.json'] = font_json().encode()
     # niewidoczny przedmiot na wolne miejsca i przyciski (opis widać po najechaniu)
     files['assets/axon/textures/item/menu_pusty.png'] = _png(Image.new('RGBA', (16, 16), (0, 0, 0, 0)))

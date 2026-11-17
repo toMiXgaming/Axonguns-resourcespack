@@ -13,6 +13,7 @@ out vec4 vertexColor;
 out vec2 axonGui;
 flat out int axonHide;
 flat out int axonGunMenu;
+out vec3 axonGunPos;
 
 // AxonMap: przy otwartej mapie plugin ustawia graczowi czas gry, którego reszta z 24000 jest
 // w [AXON_HUD_TIME, AXON_HUD_TIME + AXON_HUD_WINDOW) (OverlayLayout.HUD_TIME). Wtedy GUI chowa
@@ -62,6 +63,9 @@ void main() {
     axonGui = vec2(0.0);
     axonHide = 0;
     axonGunMenu = ProjMat[2][3] == 0.0 && axonGunMenuOpen(GameTime) ? 1 : 0;
+    // Pozycja w px GUI względem lewego górnego rogu okna skrzyni 176×222 i głębokość (dymki mają z ≥ 400).
+    vec2 axonSize = axonGuiSize(ProjMat);
+    axonGunPos = vec3(axonGuiPos(gl_Position, ProjMat) - floor((axonSize - vec2(176.0, 222.0)) * 0.5), Position.z);
     // GUI ma rzut ortogonalny (ProjMat[2][3] == 0).
     if (ProjMat[2][3] == 0.0 && axonMapOpen(GameTime)) {
         axonGui = axonGuiPos(gl_Position, ProjMat);
