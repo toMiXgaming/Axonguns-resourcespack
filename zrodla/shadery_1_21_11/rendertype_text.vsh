@@ -594,16 +594,25 @@ bool axonMiniVertex() {
 // bloku = 1 piksel płótna 640 × 384). Shader przenosi je na ekran nad kafle mapy, więc tekst jest ostry,
 // a podświetlenie pod kursorem i kursor liczy klient w każdej klatce (serwer zmienia tylko stan po kliknięciu).
 // Rozpoznanie: perspektywa, otwarte pełne GUI (axonMapOpen), alfa koloru 252/253 (text opacity encji)
-// i odległość w widoku ~AXON_UI_DEPTH.
+// i odległość w widoku w zakresie warstw (AXON_UI_DEPTH .. AXON_UI_FAR).
 //   alfa 253: napis; kolor #010203 to niewidoczny wypełniacz (ustala lewą krawędź wyrównania)
 //   alfa 252: pudełko; jeden znak = jedno pudełko: R = x / 2 (młodsze 8 bitów), G = y / 2,
 //             B = styl 5 bitów | stan 2 bity << 5 | najstarszy bit x / 2 << 7
 //             stan: 0 zwykły, 1 aktywny, 2 wyłączony, 3 wciśnięty/zaznaczony
 #define AXON_UI_DEPTH 16.0
 #define AXON_UI_UNIT 0.25
-// animacje: encja odsunięta od swojego poziomu (całe bloki: 16, przełączniki 15) o 0..AXON_UI_ANIM bloku
-// (UiDisplays.ANIM); klient płynnie interpoluje to odsunięcie, shader czyta z niego postęp
-#define AXON_UI_ANIM 0.8
+// Warstwy w osi widoku (UiDisplays): napisy 16, przełączniki 200, pudełka 400, szyba 700, kursor 15.
+// Klient sortuje przezroczyste quady od najdalszego, więc ta kolejność to kolejność rysowania.
+// Bez przesunięć w bok: przy szybkim ruchu myszą billboard bywa o ułamek stopnia obrócony względem
+// kamery, a wtedy daleki bok encji ucieka w osi widoku (dawniej rozjeżdżało to pudełka i napisy).
+// Animacje: encja odsunięta od swojej warstwy o 0..AXON_UI_ANIM bloku (UiDisplays.ANIM); klient
+// płynnie interpoluje to odsunięcie, shader czyta z niego postęp. Duży zakres = odporność na ten obrót.
+#define AXON_UI_ANIM 100.0
+#define AXON_UI_FAR 820.0
+
+float axonUiLayer(float az) {
+    return az < 150.0 ? AXON_UI_DEPTH : (az < 350.0 ? 200.0 : (az < 650.0 ? 400.0 : 700.0));
+}
 #define AXON_UI_STYLES 32
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
@@ -653,11 +662,11 @@ bool axonUiVertex() {
         return false;
     }
     vec4 view = ModelViewMat * vec4(Position, 1.0);
-    if (abs(abs(view.z) - AXON_UI_DEPTH) > 3.0) {
+    float az = abs(view.z);
+    if (az < AXON_UI_DEPTH - 3.0 || az > AXON_UI_FAR) {
         return false;
     }
-    float az = abs(view.z);
-    float lvl = floor(az + 0.05);
+    float lvl = axonUiLayer(az);
     float an = clamp((az - lvl) / AXON_UI_ANIM, 0.0, 1.0);
     float show = 1.0 - an;
     show = show * show * (3.0 - 2.0 * show);   // pojawianie się: 0 = niewidoczne, 1 = na miejscu
@@ -677,8 +686,8 @@ bool axonUiVertex() {
     int state = (c.b >> 5) & 3;
     vec2 org = vec2(float(c.r | ((c.b >> 7) << 8)), float(c.g)) * 2.0;
     vec4 st = AXON_UI_STYLE[style];
-    // przełącznik jako osobna encja (poziom 15): odsunięcie to położenie gałki, w .w jako 2 + położenie
-    bool knob = style == 11 && lvl < 15.5;
+    // przełącznik jako osobna encja (warstwa 200): odsunięcie to położenie gałki, w .w jako 2 + położenie
+    bool knob = style == 11 && lvl > 150.0 && lvl < 350.0;
     float anim = knob ? 2.0 + an : show;
     if (style != 0 && !knob) {
         org.y += 6.0 * (1.0 - show);
