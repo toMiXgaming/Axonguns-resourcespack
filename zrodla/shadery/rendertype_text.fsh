@@ -1066,9 +1066,13 @@ vec4 axonUiBox() {
     if (style == 0) {
         // szyba: jak przezroczyste piksele mapy, ale w tym samym napisie co pudełka,
         // więc jest też pod ich cieniami i półprzezroczystymi brzegami
-        vec2 e = (axonHudExtra.xy + p) / vec2(640.0, 384.0) - 0.5;
+        vec2 q = axonHudExtra.xy + p;
+        vec2 e = q / vec2(640.0, 384.0) - 0.5;
         float vig = smoothstep(0.2, 0.75, length(e * vec2(1.15, 1.0)));
-        return vec4(0.015, 0.02, 0.03, 0.5 + 0.25 * vig);
+        // chłodne światło z prawego górnego rogu i drobne ziarno (bez pasków gradientu)
+        vec3 vc = vec3(0.015, 0.02, 0.03) + AXON_UI_ACC * 0.05 * (1.0 - smoothstep(0.0, 360.0, length(q - vec2(600.0, -20.0))));
+        vc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0))) - 0.5) * 0.02;
+        return vec4(vc, 0.5 + 0.25 * vig);
     }
 
     if (style >= 12) {
@@ -1112,6 +1116,11 @@ vec4 axonUiBox() {
     if (style == 9) {
         float f = 1.0 - clamp(p.x / max(size.x, 1.0), 0.0, 1.0);
         float m = 1.0 - smoothstep(0.0, 1.0, abs(p.y - 0.5) - 0.2);
+        if (state == 2) {
+            // cienka neutralna linia (oddziela podpowiedzi klawiszy)
+            float fade = smoothstep(0.0, 24.0, p.x) * smoothstep(0.0, 24.0, size.x - p.x);
+            return vec4(vec3(1.0), 0.08 * fade * m);
+        }
         return vec4(mix(vec3(0.5), AXON_UI_ACC, f), 0.45 * f * m * step(0.0, p.x) * step(p.x, size.x));
     }
 
@@ -1134,6 +1143,7 @@ vec4 axonUiBox() {
         float line = (1.0 - smoothstep(0.3, 1.0, abs(p.y - 40.5))) * step(12.0, p.x) * step(p.x, size.x - 12.0);
         float shine = pow(0.5 + 0.5 * sin(t * 1.1 - p.x * 0.03), 8.0);
         col = mix(col, mix(vec3(0.25), AXON_UI_ACC, 0.5 + 0.5 * shine), line * 0.8);
+        col += (axonHash(dot(floor((axonHudExtra.xy + p) * 2.0), vec2(1.0, 1291.0))) - 0.5) * 0.015;
         return vec4(col, 0.9);
     }
 
@@ -1150,6 +1160,7 @@ vec4 axonUiBox() {
         alpha = 0.86;
         float rim = 1.0 - smoothstep(0.0, 1.2, -d);
         col = mix(col, vec3(1.0), rim * mix(0.22, 0.05, v));
+        col += (axonHash(dot(floor((axonHudExtra.xy + p) * 2.0), vec2(1.0, 1291.0))) - 0.5) * 0.015;
         alpha = max(alpha, rim * mix(0.22, 0.05, v));
     } else if (style == 3) {
         // karta pluginu: aktywna ma gradient akcentu od lewej i pasek; najechana jasne tło
