@@ -603,6 +603,9 @@ bool axonMiniVertex() {
 //             stan: 0 zwykły, 1 aktywny, 2 wyłączony, 3 wciśnięty/zaznaczony
 #define AXON_UI_DEPTH 16.0
 #define AXON_UI_UNIT 0.25
+// animacje: encja odsunięta od swojego poziomu (całe bloki: 16, przełączniki 15) o 0..AXON_UI_ANIM bloku
+// (UiDisplays.ANIM); klient płynnie interpoluje to odsunięcie, shader czyta z niego postęp
+#define AXON_UI_ANIM 0.8
 #define AXON_UI_STYLES 32
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
@@ -655,15 +658,20 @@ bool axonUiVertex() {
     if (abs(abs(view.z) - AXON_UI_DEPTH) > 3.0) {
         return false;
     }
+    float az = abs(view.z);
+    float lvl = floor(az + 0.05);
+    float an = clamp((az - lvl) / AXON_UI_ANIM, 0.0, 1.0);
+    float show = 1.0 - an;
+    show = show * show * (3.0 - 2.0 * show);   // pojawianie się: 0 = niewidoczne, 1 = na miejscu
     ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
     if (a > 252.5) {
         if (c == ivec3(1, 2, 3)) {
             gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
             return true;
         }
-        vec2 px = vec2(320.0 + view.x / AXON_UI_UNIT, 192.0 - view.y / AXON_UI_UNIT);
+        vec2 px = vec2(320.0 + view.x / AXON_UI_UNIT, 192.0 - view.y / AXON_UI_UNIT + 6.0 * (1.0 - show));
         gl_Position = axonUiClip(px, -0.9960);
-        vertexColor = vec4(Color.rgb, 1.0);
+        vertexColor = vec4(Color.rgb, show);
         texCoord0 = UV0;
         return true;
     }
@@ -671,6 +679,12 @@ bool axonUiVertex() {
     int state = (c.b >> 5) & 3;
     vec2 org = vec2(float(c.r | ((c.b >> 7) << 8)), float(c.g)) * 2.0;
     vec4 st = AXON_UI_STYLE[style];
+    // przełącznik jako osobna encja (poziom 15): odsunięcie to położenie gałki, w .w jako 2 + położenie
+    bool knob = style == 11 && lvl < 15.5;
+    float anim = knob ? 2.0 + an : show;
+    if (style != 0 && !knob) {
+        org.y += 6.0 * (1.0 - show);
+    }
     // kursor jak w kaflach mapy: z obrotu kamery, w pikselach płótna 640 × 384
     vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
     float yaw = degrees(atan(-forward.x, forward.z));
@@ -683,6 +697,7 @@ bool axonUiVertex() {
     if (style == 8) {
         org = cur - vec2(3.0);
         pad = 0.0;
+        anim = 1.0;
         axonHud = 21;
     } else {
         axonHud = 20;
@@ -691,7 +706,7 @@ bool axonUiVertex() {
     gl_Position = axonUiClip(org + local, st.w);
     axonHudLocal = local;
     axonHudBox = vec4(st.xy, float(style), float(state));
-    axonHudExtra = vec4(org, st.z, 0.0);
+    axonHudExtra = vec4(org, st.z, anim);
     vertexColor = vec4(1.0);
     texCoord0 = UV0;
     return true;

@@ -1098,7 +1098,7 @@ vec4 axonUiBox() {
 
     if (style == 11) {
         // przełącznik: tor i gałka; włączony = akcent, gałka po prawej
-        float on = lit ? 1.0 : 0.0;
+        float on = axonHudExtra.w >= 2.0 ? smoothstep(0.0, 1.0, axonHudExtra.w - 2.0) : (lit ? 1.0 : 0.0);
         vec3 track = mix(vec3(0.22, 0.24, 0.29), AXON_UI_ACC * 0.85, on);
         vec4 o = vec4(track, inside * 0.95);
         o.rgb = mix(o.rgb, o.rgb + vec3(0.12), 1.0 - smoothstep(0.0, 1.2, -d));
@@ -1255,6 +1255,9 @@ vec4 axonUiCursor() {
 void main() {
     if (axonHud >= 20) {
         fragColor = axonHud == 21 ? axonUiCursor() : axonUiBox();
+        if (axonHud == 20 && axonHudExtra.w <= 1.0) {
+            fragColor.a *= axonHudExtra.w;   // pojawianie się okna i nowej treści
+        }
         if (fragColor.a < 0.004) {
             discard;
         }
