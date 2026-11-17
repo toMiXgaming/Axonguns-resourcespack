@@ -546,3 +546,20 @@ Modele 3D pancerzy (`axon:<zestaw>_<element>`) służą w ekwipunku, w ręce i n
 - `assets/axon/textures/entity/equipment/humanoid_leggings/<zestaw>.png` (spodnie i pas).
 
 Tekstury mają 256×128 (czterokrotność vanilla 64×32). Zestawy: cien, lis, legion, bastion, ranger, ghillie, zlomiarz, lowca, tulacz. Kamizelka zakrywa tułów, ale ramiona mają skórkę gracza z naramiennikiem u góry i rękawicą na dole, a twarz jest odkryta. Przedmiot dostaje tę warstwę przez komponent `equippable` z `asset_id: axon:<zestaw>` (robi to plugin AxonArmor). Generator: `zrodla/gen_warstwy.py` (podgląd: `podglady/pancerze-warstwy.png`), dopisanie do gotowych zipów: `zrodla/dodaj_warstwy.py`, pełna przebudowa `build_pack.py` też je uwzględnia.
+
+## Plakietki rang przy nicku (`zrodla/axoncore/rangi.py`)
+
+Pikselowe plakietki rang (żeton z ikoną i tabliczka z nazwą) jako znaki czcionki `minecraft:default`, po jednym znaku na rangę, więc prefix w LuckPerms to sam znak i spacja; EssentialsChat (`{PREFIX}`), lista graczy i nametagi TAB pokazują go bez zmian w pluginach. Znak ma wysokość 9 i ascent 8 (mieści się w wierszu czatu), obrazki są w potrójnej rozdzielczości (27 px = 9 px GUI).
+
+| Znak | Plik | Napis |
+|---|---|---|
+| U+EC00 | `wlasciciel` | WŁAŚCICIEL |
+| U+EC01 | `admin` | ADMIN |
+| U+EC02 | `moderator` | MOD |
+| U+EC03 | `pomocnik` | POMOCNIK |
+| U+EC04 | `budowniczy` | BUDOWNICZY |
+| U+EC05 | `elita` | ELITA |
+| U+EC06 | `vip` | VIP |
+| U+EC07 | `gracz` | OCALAŁY |
+
+Zakres U+EC00–U+EC1F jest zarezerwowany na plakietki. Nowa ranga: wpis w `RANGI` (znak, napis, ikona, kolory), ikona 10×10 kropek w `ICONS`. Znaki trafiają do tego samego `default.json` co tablica (`tablica.pliki()`), więc `build_pack.py` i `dodaj_tablice.py` biorą je same. Podgląd: `python3 zrodla/preview_rangi.py` → `podglady/rangi-czat.png`.

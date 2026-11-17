@@ -470,6 +470,9 @@ def pliki():
         files[FONT_DIR + name + '.png'] = _png(imgs[name])
         providers.append({'type': 'bitmap', 'file': FONT_REF + name + '.png', 'height': height,
                           'ascent': ascent, 'chars': [chr(cp)]})
+    from . import rangi   # plakietki rang przy nicku (U+EC00–U+EC1F), ten sam default.json
+    files.update(rangi.pliki())
+    providers += rangi.providers()
     files['assets/minecraft/font/default.json'] = json.dumps({'providers': providers}, ensure_ascii=True,
                                                              indent=1).encode()
     files['assets/axon/font/maly.json'] = json.dumps(maly(), ensure_ascii=True, indent=1).encode()
