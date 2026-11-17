@@ -1252,6 +1252,226 @@ vec4 axonUiCursor() {
     return axonUiOver(arrow, shadow);
 }
 
+// ── Pełna mapa AxonMap po stronie klienta (opis w rendertype_text.vsh) ───────────────────────────
+// Kolory znaczników jak w pluginie (OverlayRenderer, WaypointColor): czerwony, pomarańczowy, żółty, zielony,
+// niebieski, fioletowy, różowy, biały i błękitny (domyślny romb).
+const vec3 AXON_FULL_COLORS[9] = vec3[9](vec3(240.0, 60.0, 60.0) / 255.0, vec3(255.0, 150.0, 0.0) / 255.0,
+        vec3(255.0, 220.0, 40.0) / 255.0, vec3(90.0, 230.0, 90.0) / 255.0, vec3(80.0, 160.0, 255.0) / 255.0,
+        vec3(190.0, 90.0, 240.0) / 255.0, vec3(255.0, 130.0, 200.0) / 255.0, vec3(250.0, 250.0, 250.0) / 255.0,
+        vec3(80.0, 220.0, 255.0) / 255.0);
+const vec3 AXON_FULL_OUTLINE = vec3(14.0, 15.0, 19.0) / 255.0;
+
+// Teren: kafel 128 × 128 bloków; przy oddaleniu cztery próbki na piksel ekranu, żeby nie migotał.
+vec4 axonFullTile() {
+    vec2 lo = axonMiniB.xy;
+    vec2 hi = axonMiniB.zw;
+    vec2 texel = (hi - lo) / 128.0;
+    vec2 dx = dFdx(texCoord0) * 0.25;
+    vec2 dy = dFdy(texCoord0) * 0.25;
+    vec4 acc = vec4(0.0);
+    for (int i = 0; i < 4; i++) {
+        vec2 o = vec2(i == 0 || i == 2 ? -1.0 : 1.0, i < 2 ? -1.0 : 1.0);
+        vec2 uv = clamp(texCoord0 + o.x * dx + o.y * dy, lo + texel * 0.5, hi - texel * 0.5);
+        vec4 t = texture(Sampler0, uv);
+        float known = t.a > 0.5 ? 1.0 : 0.0;
+        acc += vec4(t.rgb * known, known);
+    }
+    return acc.a > 0.0 ? vec4(acc.rgb / acc.a, acc.a * 0.25) : vec4(0.0);
+}
+
+float axonFullLattice(vec2 cell, float period, float seed) {
+    vec2 c = mod(cell, period);
+    return fract(sin(dot(c, vec2(127.1, 311.7)) + seed * 74.7) * 43758.5453);
+}
+
+float axonFullNoise(vec2 p, float period, float seed) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = axonFullLattice(i, period, seed);
+    float b = axonFullLattice(i + vec2(1.0, 0.0), period, seed);
+    float c = axonFullLattice(i + vec2(0.0, 1.0), period, seed);
+    float d = axonFullLattice(i + vec2(1.0, 1.0), period, seed);
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// Miejsca, których serwer jeszcze nie zna: miękkie chmury przyklejone do świata (okres 2048 bloków).
+vec4 axonFullBack() {
+    vec2 w = axonMiniA.xy + axonMiniL * axonMiniA.w;
+    float n = 0.65 * axonFullNoise(w / 64.0, 32.0, 11.0) + 0.35 * axonFullNoise(w / 16.0, 128.0, 57.0);
+    vec3 low = vec3(204.0, 212.0, 228.0) / 255.0;
+    vec3 mid = vec3(232.0, 236.0, 245.0) / 255.0;
+    vec3 c = mix(low, mid, smoothstep(0.30, 0.46, n));
+    c = mix(c, vec3(1.0), smoothstep(0.54, 0.66, n));
+    return vec4(c, 1.0);
+}
+
+float axonFullSeg(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+// Odległość ze znakiem od wielokąta (ujemna w środku), do 10 wierzchołków.
+float axonFullPoly(vec2 p, vec2 v[10], int n) {
+    float d = dot(p - v[0], p - v[0]);
+    float s = 1.0;
+    int j = n - 1;
+    for (int i = 0; i < 10; i++) {
+        if (i >= n) {
+            break;
+        }
+        vec2 e = v[j] - v[i];
+        vec2 w = p - v[i];
+        vec2 b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+        d = min(d, dot(b, b));
+        bvec3 cond = bvec3(p.y >= v[i].y, p.y < v[j].y, e.x * w.y > e.y * w.x);
+        if (all(cond) || all(not(cond))) {
+            s = -s;
+        }
+        j = i;
+    }
+    return s * sqrt(d);
+}
+
+// Kształt z obwódką: wypełnienie, gdzie d < 0, obwódka do grubości w.
+vec4 axonFullShape(float d, float w, vec3 fill, vec3 edge, float aa) {
+    vec3 c = mix(fill, edge, smoothstep(-aa, aa, d));
+    return vec4(c, 1.0 - smoothstep(-aa, aa, d - w));
+}
+
+vec4 axonFullOver(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    return a <= 0.0 ? vec4(0.0) : vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+
+vec4 axonFullPin() {
+    int kind = int(axonMiniA.x + 0.5);
+    int style = int(axonMiniA.y + 0.5);
+    vec2 p = axonMiniL;
+    float aa = max(fwidth(p.x) * 0.7, 1e-3);
+    vec3 col = AXON_FULL_COLORS[clamp(style, 0, 8)];
+    if (kind == 5) {
+        col = vec3(255.0, 222.0, 70.0) / 255.0;
+    } else if (kind == 6) {
+        col = vec3(255.0, 150.0, 0.0) / 255.0;
+    } else if (kind == 7) {
+        col = AXON_FULL_COLORS[0];
+    }
+    vec2 v[10];
+    if (axonMiniA.w > 0.5) {
+        // cel poza ekranem: trójkąt w jego stronę
+        vec2 f = axonMiniB.xy;
+        vec2 q = vec2(-f.y, f.x);
+        v[0] = f * 7.0;
+        v[1] = -f * 4.2 + q * 4.9;
+        v[2] = -f * 4.2 - q * 4.9;
+        return axonFullShape(axonFullPoly(p, v, 3), 1.6, col, AXON_FULL_OUTLINE, aa);
+    }
+    if (kind == 8) {
+        // Ty: strzałka nawigacji z wcięciem, biała obwódka, czerwone wypełnienie
+        float yaw = radians(float(style) * 11.25);
+        vec2 f = vec2(-sin(yaw), cos(yaw));
+        vec2 q = vec2(-f.y, f.x);
+        float s = 7.5;
+        v[0] = f * s;
+        v[1] = -f * s * 0.75 + q * s * 0.72;
+        v[2] = -f * s * 0.35;
+        v[3] = -f * s * 0.75 - q * s * 0.72;
+        float d = axonFullPoly(p, v, 4);
+        vec4 shadow = vec4(0.0, 0.0, 0.0, 0.35 * (1.0 - smoothstep(-1.0, 2.5, axonFullPoly(p - vec2(0.5, 0.9), v, 4))));
+        return axonFullOver(axonFullShape(d, 1.1, vec3(239.0, 64.0, 64.0) / 255.0, vec3(1.0), aa), shadow);
+    }
+    if (kind == 5) {
+        vec4 o = axonFullShape(length(p) - 2.6, 1.0, col, AXON_FULL_OUTLINE, aa);
+        return axonFullOver(vec4(1.0, 1.0, 1.0, 0.6 * (1.0 - smoothstep(-aa, aa, length(p - vec2(-0.6, -1.0)) - 1.0))), o);
+    }
+    if (kind == 6) {
+        vec4 o = axonFullShape(axonRoundBox(p, vec2(3.6), 1.8), 1.0, col, AXON_FULL_OUTLINE, aa);
+        return axonFullOver(vec4(AXON_FULL_OUTLINE, 1.0 - smoothstep(-aa, aa, length(p) - 1.5)), o);
+    }
+    if (kind == 3 || kind == 7) {
+        float a = 3.6;
+        float d = min(axonFullSeg(p, vec2(-a), vec2(a)), axonFullSeg(p, vec2(a, -a), vec2(-a, a))) - 0.95;
+        return axonFullShape(d, 0.85, col, AXON_FULL_OUTLINE, aa);
+    }
+    float d;
+    float s = 5.0;
+    if (kind == 1) {
+        v[0] = vec2(0.0, -s);
+        v[1] = vec2(s * 0.95, -s * 0.1);
+        v[2] = vec2(s * 0.7, -s * 0.1);
+        v[3] = vec2(s * 0.7, s * 0.85);
+        v[4] = vec2(-s * 0.7, s * 0.85);
+        v[5] = vec2(-s * 0.7, -s * 0.1);
+        v[6] = vec2(-s * 0.95, -s * 0.1);
+        d = axonFullPoly(p, v, 7);
+    } else if (kind == 2) {
+        for (int i = 0; i < 10; i++) {
+            float angle = 3.14159265 * float(i) / 5.0 - 1.5707963;
+            float r = (i % 2 == 0) ? s * 1.1 : s * 0.48;
+            v[i] = vec2(cos(angle), sin(angle)) * r + vec2(0.0, s * 0.08);
+        }
+        d = axonFullPoly(p, v, 10);
+    } else if (kind == 4) {
+        float pole = axonFullSeg(p, vec2(-s * 0.55, s), vec2(-s * 0.55, -s)) - 0.5;
+        v[0] = vec2(-s * 0.45, -s);
+        v[1] = vec2(s, -s * 0.9);
+        v[2] = vec2(s, -s * 0.05);
+        v[3] = vec2(-s * 0.45, -s * 0.15);
+        vec4 flag = axonFullShape(axonFullPoly(p, v, 4), 0.9, col, AXON_FULL_OUTLINE, aa);
+        return axonFullOver(flag, axonFullShape(pole, 0.8, vec3(225.0, 225.0, 230.0) / 255.0, AXON_FULL_OUTLINE, aa));
+    } else {
+        v[0] = vec2(0.0, -s);
+        v[1] = vec2(s * 0.85, 0.0);
+        v[2] = vec2(0.0, s);
+        v[3] = vec2(-s * 0.85, 0.0);
+        d = axonFullPoly(p, v, 4);
+    }
+    vec4 o = axonFullShape(d, 0.9, col, AXON_FULL_OUTLINE, aa);
+    // jaśniejsza górna połowa, jak w ikonach na serwerze
+    if (d < 0.0 && p.y < -s * 0.2) {
+        o.rgb = mix(o.rgb, vec3(1.0), 0.27);
+    }
+    return o;
+}
+
+vec4 axonTexel4(ivec2 pixel) {
+    pixel = clamp(pixel, ivec2(0), ivec2(127));
+    if (pixel.y == 0 && pixel.x < 40) {
+        return vec4(0.0);   // znacznik kafla i flaga trybu klienta
+    }
+    if (pixel.y == 127) {
+        pixel.y = 126;
+    }
+    return texelFetch(Sampler0, pixel, 0);
+}
+
+// Jak axonSharp, ale z przezroczystością: w trybie klienta tło map UI jest przezroczyste.
+vec4 axonSharp4(vec2 uv) {
+    vec2 texel = uv * 128.0;
+    vec2 perScreen = max(fwidth(texel), vec2(1e-4));
+    vec2 scale = max(1.0 / perScreen, vec2(1.0));
+    vec2 base = floor(texel);
+    vec2 inside = texel - base - 0.5;
+    vec2 range = 0.5 - 0.5 / scale;
+    vec2 f = (inside - clamp(inside, -range, range)) * scale;
+    vec2 p = base + 0.5 + f - 0.5;
+    ivec2 i = ivec2(floor(p));
+    vec2 w = fract(p);
+    vec4 c00 = axonTexel4(i);
+    vec4 c10 = axonTexel4(i + ivec2(1, 0));
+    vec4 c01 = axonTexel4(i + ivec2(0, 1));
+    vec4 c11 = axonTexel4(i + ivec2(1, 1));
+    c00.rgb *= c00.a;
+    c10.rgb *= c10.a;
+    c01.rgb *= c01.a;
+    c11.rgb *= c11.a;
+    vec4 c = mix(mix(c00, c10, w.x), mix(c01, c11, w.x), w.y);
+    return c.a > 0.0 ? vec4(c.rgb / c.a, c.a) : vec4(0.0);
+}
+
 void main() {
     if (axonHud >= 20) {
         fragColor = axonHud == 21 ? axonUiCursor() : axonUiBox();
@@ -1265,7 +1485,13 @@ void main() {
     }
     if (axonMiniA.z > 0.5) {
         int k = int(axonMiniA.z);
-        if (k == 5) {
+        if (k == 8) {
+            fragColor = axonFullTile();
+        } else if (k == 9) {
+            fragColor = axonFullPin();
+        } else if (k == 10) {
+            fragColor = axonFullBack();
+        } else if (k == 5) {
             fragColor = axonMiniTile();
         } else if (k == 3) {
             fragColor = axonMiniPin();
@@ -1322,7 +1548,9 @@ void main() {
         // Mapa AxonMap: bez światła i mgły.
         // Obie gęstości skalujemy gładko: 384 wiersze mapy na 1080 px ekranu to 2,81 px na piksel,
         // a bez tego część wierszy ma 2 px, część 3 px i litery wychodzą nierówne.
-        fragColor = vec4(axonSharp(texCoord0), 1.0);
+        bool axonClient = axonHud == 9;
+        vec4 axonBase = axonClient ? axonSharp4(texCoord0) : vec4(axonSharp(texCoord0), 1.0);
+        fragColor = axonBase;
 
         // Sprity i kursor są w pikselach logicznych ekranu 640x384, niezależnie od gęstości siatki.
         int cols = AXON_COLS * axonDensity;
@@ -1333,7 +1561,8 @@ void main() {
         // Wiersze 0 i 127 niosą znaczniki kafla, więc dla nich sprawdzamy sąsiedni wiersz.
         ivec2 axonTp = ivec2(clamp(floor(texCoord0 * 128.0), 0.0, 127.0));
         axonTp.y = axonTp.y == 0 ? 1 : (axonTp.y == 127 ? 126 : axonTp.y);
-        if (texelFetch(Sampler0, axonTp, 0).a < 0.5) {
+        // (nie przy pełnej mapie po stronie klienta: tam pod przezroczystymi pikselami jest teren)
+        if (!axonClient && texelFetch(Sampler0, axonTp, 0).a < 0.5) {
             vec2 e = mapPixel / vec2(640.0, 384.0) - 0.5;
             float vig = smoothstep(0.2, 0.75, length(e * vec2(1.15, 1.0)));
             fragColor = vec4(0.015, 0.02, 0.03, 0.5 + 0.25 * vig);
@@ -1346,7 +1575,7 @@ void main() {
         for (int i = 0; i < AXON_SPRITES; i++) {
             axonSprite(spriteBase, mapPixel, spriteAa, cursorPixel, i);
         }
-        fragColor = vec4(spriteBase, 1.0);
+        fragColor = vec4(spriteBase, axonBase.a);
 
         // Kursor: krzyżyk z obwódką.
         vec2 d = abs(floor(mapPixel) - floor(cursorPixel));
@@ -1354,6 +1583,9 @@ void main() {
             fragColor = vec4(1.0);
         } else if ((d.x <= 6.0 && d.y <= 1.0) || (d.y <= 6.0 && d.x <= 1.0)) {
             fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+        if (fragColor.a < 0.004) {
+            discard;
         }
         return;
     }

@@ -135,6 +135,8 @@ Model w paczce to `qualityarmory:gun/<name>`. Na serwerze skin to „attachment�
 
 Paczka zawiera też shadery `rendertype_text` i `position_tex_color` (w nakładkach `axon_shadery*`, na 1.21–1.21.5) z pluginu [AxonMap](https://github.com/toMiXgaming/AXONMAP). Rysuje on mapę świata na cały ekran po wpisaniu `/mapa`. Shader rozpoznaje tylko mapy pluginu (po znaczniku w pierwszym wierszu), więc zwykłe napisy, tabliczki i mapy działają jak wcześniej. Przy otwartej mapie chowają też hotbar, serduszka i celownik. Źródła są w `zrodla/shadery/`, a `build_pack.py` dodaje je do zipa.
 
+**Pełna mapa po stronie klienta** (część „Pełna mapa AxonMap po stronie klienta” w `rendertype_text`, AxonMap 0.4.0+): u gracza z paczką minimapy teren i znaczniki pełnej mapy to znaki czcionki `axonmap:minimapa` w dwóch niewidzialnych wyświetlaczach tekstu stojących w kamerze. Plugin przy WASD, scrollu i kliknięciu zmienia tylko ich przesunięcie, a klient interpoluje je w każdej klatce, więc mapa przesuwa się i przybliża płynnie. Mapy na ramkach niosą wtedy tylko przyciski, panele i napisy (przezroczysty piksel (32, 0) każdej mapy to flaga tego trybu). Bez paczki minimapy wszystko działa jak dawniej (cały obraz z serwera).
+
 Ten sam shader rysuje pełnoekranowe GUI AxonCore (warsztaty, mini gry, skrzynie) z AxonOverlay. Zwykły ekran to 5×3 mapy (640×384 px). Ostry ekran to 10×6 map (1280×768 px): znacznik ma wtedy w ostatnim wierszu odwrócony wzór, numer kafla jest zapisany jako reszta z dzielenia przez 16 (piksele 8–23) i wynik dzielenia przez 16 (piksele 24–31). Ostry ekran jest skalowany gładko (piksel obrazu ma stały kolor, a krawędź między pikselami ma szerokość jednego piksela ekranu), a sprity i kursor są liczone w pikselach logicznych 640×384.
 
 
