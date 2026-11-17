@@ -7,6 +7,8 @@ Shadery są tylko w nakładkach (overlays), tak jak robi to build_pack.py:
 - axon_shadery_1_21_11/ (1.21.11)      z zrodla/shadery_1_21_11.
 pack.mcmeta jest brany z zrodla/pack.mcmeta (tam są wpisy nakładek).
 Stare shadery w assets/minecraft/shaders/ (poza nakładkami) są usuwane, bo psują 1.21.11.
+Na końcu przebudowuje QualityArmory-21-axon-1.21.11-shadery.zip (buduj_1_21_11.py), który AxonGuns
+wysyła klientom 1.21.11.
 """
 import os
 import shutil
@@ -53,6 +55,9 @@ def main():
                 dst.writestr(zi, data)
         shutil.move(tmp, path)
         print('zaktualizowano', zip_name, len(files), 'plików')
+    # AxonGuns daje klientom 1.21.11 osobny zip z shaderami w assets/ (bez nakładek): budujemy go od nowa
+    import buduj_1_21_11
+    buduj_1_21_11.main()
 
 
 if __name__ == '__main__':
