@@ -4,6 +4,7 @@
 #moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
 #moj_import <minecraft:globals.glsl>
+#moj_import <minecraft:axon_freeze.glsl>
 
 in vec3 Position;
 in vec4 Color;
@@ -57,7 +58,7 @@ void main() {
         cylindricalVertexDistance = 0.0;
         return;
     }
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    gl_Position = axonWorldProj(ProjMat) * axonWorldView(ModelViewMat, ProjMat) * vec4(Position, 1.0);
 
     sphericalVertexDistance = fog_spherical_distance(Position);
     cylindricalVertexDistance = fog_cylindrical_distance(Position);
