@@ -603,21 +603,29 @@ bool axonMiniVertex() {
 //             stan: 0 zwykły, 1 aktywny, 2 wyłączony, 3 wciśnięty/zaznaczony
 #define AXON_UI_DEPTH 16.0
 #define AXON_UI_UNIT 0.25
-#define AXON_UI_STYLES 12
+#define AXON_UI_STYLES 20
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
     vec4(0.0, 0.0, 0.0, -0.9920),
-    vec4(608.0, 356.0, 12.0, -0.9905),   // 1 panel okna
-    vec4(164.0, 300.0, 9.0, -0.9910),    // 2 pasek kart
-    vec4(148.0, 26.0, 7.0, -0.9920),     // 3 karta
+    vec4(608.0, 356.0, 14.0, -0.9905),   // 1 panel okna
+    vec4(164.0, 300.0, 10.0, -0.9910),   // 2 pasek kart
+    vec4(148.0, 26.0, 8.0, -0.9920),     // 3 karta
     vec4(124.0, 20.0, 10.0, -0.9920),    // 4 zakładka (pigułka)
-    vec4(204.0, 40.0, 8.0, -0.9920),     // 5 kafel ustawienia
-    vec4(416.0, 36.0, 8.0, -0.9915),     // 6 opis pod kursorem
-    vec4(26.0, 22.0, 7.0, -0.9920),      // 7 zamknij
+    vec4(204.0, 40.0, 9.0, -0.9920),     // 5 kafel ustawienia
+    vec4(416.0, 36.0, 9.0, -0.9915),     // 6 opis pod kursorem
+    vec4(26.0, 22.0, 8.0, -0.9920),      // 7 zamknij
     vec4(20.0, 20.0, 0.0, -0.9990),      // 8 kursor
     vec4(416.0, 2.0, 1.0, -0.9915),      // 9 linia
     vec4(140.0, 16.0, 8.0, -0.9920),     // 10 plakietka
-    vec4(204.0, 40.0, 8.0, -0.9920));    // 11 zapas
+    vec4(30.0, 16.0, 8.0, -0.9930),      // 11 przełącznik (stan 1 = włączony)
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 12 ikona: mapa (kompas)
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 13 ikona: tablica (lista)
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 14 ikona: bronie (celownik)
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 15 ikona: rozmowy (dymek)
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 16 ikona: wygląd (paleta)
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 17 ikona: zębatka
+    vec4(16.0, 16.0, 0.0, -0.9930),      // 18 ikona: gwiazdka
+    vec4(16.0, 16.0, 0.0, -0.9930));     // 19 ikona: strzałka dalej
 
 vec4 axonUiClip(vec2 px, float z) {
     return vec4(px.x / 320.0 - 1.0, 1.0 - px.y / 192.0, z, 1.0);
@@ -659,7 +667,7 @@ bool axonUiVertex() {
     vec2 cur = axonCursor * vec2(640.0, 384.0);
     int vc = gl_VertexID % 4;
     vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
-    float pad = 10.0;
+    float pad = style >= 11 ? 2.0 : 10.0;
     if (style == 8) {
         org = cur - vec2(3.0);
         pad = 0.0;
