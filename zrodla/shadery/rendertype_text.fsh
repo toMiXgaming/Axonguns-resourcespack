@@ -1072,6 +1072,8 @@ vec4 axonUiBox() {
         // chłodne światło z prawego górnego rogu i drobne ziarno (bez pasków gradientu)
         vec3 vc = vec3(0.015, 0.02, 0.03) + AXON_UI_ACC * 0.05 * (1.0 - smoothstep(0.0, 360.0, length(q - vec2(600.0, -20.0))));
         vc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0))) - 0.5) * 0.02;
+        // stan 1 (menu akcesoriów): ciemniej i mocniejsza winieta, broń ma odciąć się od świata
+        if (state == 1) return vec4(vc, 0.8 + 0.18 * smoothstep(0.1, 0.7, length(e * vec2(1.15, 1.0))));
         return vec4(vc, 0.5 + 0.25 * vig);
     }
 
@@ -1475,11 +1477,16 @@ vec4 axonSharp4(vec2 uv) {
     return c.a > 0.0 ? vec4(c.rgb / c.a, c.a) : vec4(0.0);
 }
 
+#moj_import <minecraft:axon_gs_ui_frag.glsl>
+
 void main() {
     if (axonHud >= 20) {
-        fragColor = axonHud == 21 ? axonUiCursor() : axonUiBox();
+        fragColor = axonHud == 22 ? axonGsUiBox() : (axonHud == 21 ? axonUiCursor() : axonUiBox());
         if (axonHud == 20 && axonHudExtra.w <= 1.0) {
             fragColor.a *= axonHudExtra.w;   // pojawianie się okna i nowej treści
+        }
+        if (axonHud == 22 && axonHudBox.z < 2.5) {
+            fragColor.a *= axonHudExtra.w;   // menu akcesoriów: wjazd kafelków i listy (pasek: postęp zmiany)
         }
         if (fragColor.a < 0.004) {
             discard;

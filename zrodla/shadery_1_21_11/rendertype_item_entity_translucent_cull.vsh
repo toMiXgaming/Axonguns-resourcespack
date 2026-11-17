@@ -6,6 +6,7 @@
 #moj_import <minecraft:projection.glsl>
 #moj_import <minecraft:globals.glsl>
 #moj_import <minecraft:axon_freeze.glsl>
+#moj_import <minecraft:axon_gs.glsl>
 
 in vec3 Position;
 in vec4 Color;
@@ -23,6 +24,11 @@ out vec4 vertexColor;
 out vec2 texCoord0;
 out vec2 texCoord1;
 out vec2 texCoord2;
+flat out vec4 axonGsA;
+flat out vec4 axonGsB;
+out vec2 axonGsP;
+
+#moj_import <minecraft:axon_gs_item.glsl>
 
 void main() {
     gl_Position = axonWorldProj(ProjMat) * axonWorldView(ModelViewMat, ProjMat) * vec4(Position, 1.0);
@@ -33,4 +39,8 @@ void main() {
     texCoord0 = UV0;
     texCoord1 = UV1;
     texCoord2 = UV2;
+    if (axonGsItem(ProjMat)) {
+        sphericalVertexDistance = 0.0;
+        cylindricalVertexDistance = 0.0;
+    }
 }

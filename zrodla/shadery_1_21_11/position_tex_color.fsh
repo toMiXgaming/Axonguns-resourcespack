@@ -17,7 +17,6 @@ in vec2 texCoord0;
 in vec4 vertexColor;
 in vec2 axonGui;
 flat in int axonHide;
-flat in int axonGunMenu;
 
 out vec4 fragColor;
 
@@ -53,12 +52,6 @@ bool axonInHud(vec2 pos, vec2 size, float hudHeight) {
 void main() {
     if (axonHide == 1 && axonInHud(axonGui, axonGuiSize(ProjMat), 70.0)) {
         discard;
-    }
-    if (axonGunMenu == 1 && textureSize(Sampler0, 0) == ivec2(256, 256)) {
-        vec4 marker = texelFetch(Sampler0, ivec2(255, 255), 0) * 255.0;
-        if (all(lessThan(abs(marker - vec4(1.0, 2.0, 3.0, 4.0)), vec4(0.5)))) {
-            discard;
-        }
     }
     vec4 color = texture(Sampler0, texCoord0) * vertexColor;
     if (color.a == 0.0) {
