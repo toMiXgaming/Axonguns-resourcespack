@@ -926,7 +926,7 @@ float axonUiRing(vec2 p, vec2 c, float r, float w) {
     return abs(length(p - c) - r) - w * 0.5;
 }
 
-// Ikony 16 × 16 (style 12–19) jako odległość ze znakiem; wypełnienie tam, gdzie d < 0.
+// Ikony (style 12–31) w polu 16 × 16 jako odległość ze znakiem; wypełnienie tam, gdzie d < 0.
 float axonUiIcon(int style, vec2 p) {
     vec2 c = vec2(8.0);
     vec2 q = p - c;
@@ -937,14 +937,14 @@ float axonUiIcon(int style, vec2 p) {
         vec2 r = vec2(q.x * 0.7071 + q.y * 0.7071, -q.x * 0.7071 + q.y * 0.7071);
         d = min(d, abs(r.x) * 2.6 + abs(r.y) - 4.2);
     } else if (style == 13) {
-        // tablica: trzy linie z kropkami
+        // lista: trzy linie z kropkami
         for (int i = 0; i < 3; i++) {
             float y = 3.5 + float(i) * 4.5;
             d = min(d, length(p - vec2(3.0, y)) - 1.3);
             d = min(d, axonSegment(p, vec2(6.0, y), vec2(13.5, y)) - 0.85);
         }
     } else if (style == 14) {
-        // bronie: celownik
+        // celownik
         d = axonUiRing(p, c, 4.6, 1.3);
         d = min(d, axonSegment(p, vec2(8.0, 0.8), vec2(8.0, 4.0)) - 0.7);
         d = min(d, axonSegment(p, vec2(8.0, 12.0), vec2(8.0, 15.2)) - 0.7);
@@ -952,36 +952,104 @@ float axonUiIcon(int style, vec2 p) {
         d = min(d, axonSegment(p, vec2(12.0, 8.0), vec2(15.2, 8.0)) - 0.7);
         d = min(d, length(q) - 1.2);
     } else if (style == 15) {
-        // rozmowy: dymek
-        float body = axonRect(p, 1.0, 2.0, 14.0, 9.5, 3.0);
-        float tail = axonUiTri(p, vec2(4.0, 10.5), vec2(4.0, 14.5), vec2(8.0, 10.5));
-        float shape = min(body, tail);
+        // dymek
+        float shape = min(axonRect(p, 1.0, 2.0, 14.0, 9.5, 3.0), axonUiTri(p, vec2(4.0, 10.5), vec2(4.0, 14.5), vec2(8.0, 10.5)));
         d = abs(shape) - 0.7;
         for (int i = 0; i < 3; i++) d = min(d, length(p - vec2(4.8 + float(i) * 3.2, 6.8)) - 0.95);
     } else if (style == 16) {
-        // wygląd: paleta z dziurką na kciuk
+        // paleta z dziurką na kciuk i farbami
         d = max(length(q) - 6.8, -(length(p - vec2(10.6, 10.6)) - 1.9));
         d = max(d, -(length(p - vec2(5.0, 6.0)) - 1.3));
         d = max(d, -(length(p - vec2(8.6, 4.2)) - 1.3));
         d = max(d, -(length(p - vec2(4.6, 10.0)) - 1.3));
     } else if (style == 17) {
         // zębatka
-        float ang = atan(q.y, q.x);
-        float teeth = smoothstep(-0.25, 0.25, cos(ang * 8.0));
+        float teeth = smoothstep(-0.25, 0.25, cos(atan(q.y, q.x) * 8.0));
         d = max(length(q) - (5.2 + 1.6 * teeth), -(length(q) - 2.3));
     } else if (style == 18) {
         // gwiazdka
-        float ang = atan(q.x, -q.y);
         float k = 6.2831853 / 5.0;
-        float a2 = mod(ang + k * 0.5, k) - k * 0.5;
+        float a2 = mod(atan(q.x, -q.y) + k * 0.5, k) - k * 0.5;
         vec2 r = length(q) * vec2(cos(a2), abs(sin(a2)));
-        d = axonUiTri(r, vec2(0.0), vec2(7.0, 0.0), vec2(2.7 * cos(k * 0.5), 2.7 * sin(k * 0.5)));
-        d = min(d, length(q) - 2.6);
-    } else {
+        d = min(axonUiTri(r, vec2(0.0), vec2(7.2, 0.0), vec2(2.8 * cos(k * 0.5), 2.8 * sin(k * 0.5))), length(q) - 2.7);
+    } else if (style == 19) {
         // strzałka dalej
-        d = min(axonSegment(p, vec2(5.5, 3.5), vec2(10.5, 8.0)), axonSegment(p, vec2(10.5, 8.0), vec2(5.5, 12.5))) - 1.0;
+        d = min(axonSegment(p, vec2(5.5, 3.5), vec2(10.5, 8.0)), axonSegment(p, vec2(10.5, 8.0), vec2(5.5, 12.5))) - 1.1;
+    } else if (style == 20) {
+        // lupa
+        d = min(axonUiRing(p, vec2(6.8, 6.8), 4.3, 1.5), axonSegment(p, vec2(10.0, 10.0), vec2(14.0, 14.0)) - 1.2);
+    } else if (style == 21) {
+        // serce
+        vec2 h = vec2(abs(q.x), -q.y + 1.5);
+        d = min(length(h - vec2(2.9, 2.2)) - 3.3, axonUiTri(vec2(abs(q.x), q.y), vec2(0.0, 6.6), vec2(6.1, 0.2), vec2(0.0, -1.0)));
+    } else if (style == 22) {
+        // dom
+        d = min(axonUiTri(p, vec2(8.0, 1.5), vec2(15.0, 8.0), vec2(1.0, 8.0)), axonRect(p, 3.0, 7.0, 10.0, 7.5, 0.8));
+        d = max(d, -axonRect(p, 6.5, 9.5, 3.0, 5.0, 0.5));
+    } else if (style == 23) {
+        // rdzeń: diament z połyskiem
+        d = abs(q.x) * 0.95 + abs(q.y + 0.5) * 0.75 - 5.2;
+        d = max(d, -(abs(q.x) * 0.95 + abs(q.y + 0.5) * 0.75 - 2.4));
+        d = min(d, abs(q.x) * 0.95 + abs(q.y + 0.5) * 0.75 - 1.0);
+    } else if (style == 24) {
+        // nagrobek z krzyżem
+        d = axonRect(p, 3.0, 2.0, 10.0, 12.5, 4.5);
+        d = max(d, -min(axonRect(p, 7.2, 4.5, 1.6, 7.0, 0.3), axonRect(p, 5.2, 6.4, 5.6, 1.6, 0.3)));
+    } else if (style == 25) {
+        // ramka: rogi
+        float a = min(axonSegment(p, vec2(2.0, 2.0), vec2(6.0, 2.0)), axonSegment(p, vec2(2.0, 2.0), vec2(2.0, 6.0)));
+        a = min(a, min(axonSegment(p, vec2(14.0, 14.0), vec2(10.0, 14.0)), axonSegment(p, vec2(14.0, 14.0), vec2(14.0, 10.0))));
+        a = min(a, min(axonSegment(p, vec2(14.0, 2.0), vec2(10.0, 2.0)), axonSegment(p, vec2(14.0, 2.0), vec2(14.0, 6.0))));
+        a = min(a, min(axonSegment(p, vec2(2.0, 14.0), vec2(6.0, 14.0)), axonSegment(p, vec2(2.0, 14.0), vec2(2.0, 10.0))));
+        d = min(a - 1.0, axonRect(p, 5.5, 5.5, 5.0, 5.0, 1.0));
+    } else if (style == 26) {
+        // zegar
+        d = axonUiRing(p, c, 6.2, 1.3);
+        d = min(d, axonSegment(p, c, vec2(8.0, 4.0)) - 0.8);
+        d = min(d, axonSegment(p, c, vec2(11.0, 9.5)) - 0.8);
+    } else if (style == 27) {
+        // start
+        d = axonUiTri(p, vec2(4.5, 2.5), vec2(4.5, 13.5), vec2(13.5, 8.0)) - 0.6;
+    } else if (style == 28) {
+        // tarcza
+        d = min(axonRect(p, 2.5, 1.5, 11.0, 8.5, 2.0), axonUiTri(p, vec2(2.5, 8.0), vec2(13.5, 8.0), vec2(8.0, 15.0)));
+    } else if (style == 29) {
+        // oko
+        float lens = max(length(p - vec2(8.0, 14.5)) - 10.0, length(p - vec2(8.0, 1.5)) - 10.0);
+        d = max(lens, -(length(q) - 3.6));
+        d = min(d, length(q) - 1.9);
+    } else if (style == 30) {
+        // informacja
+        d = max(length(q) - 7.0, -min(length(p - vec2(8.0, 4.6)) - 1.3, axonRect(p, 7.0, 6.8, 2.0, 5.8, 0.8)));
+    } else {
+        // flaga
+        d = min(axonSegment(p, vec2(3.5, 1.5), vec2(3.5, 15.0)) - 0.9, axonUiTri(p, vec2(4.0, 2.0), vec2(14.0, 5.5), vec2(4.0, 9.0)));
     }
     return d;
+}
+
+// Kolor plakietki ikony (stan 2–3: kolorowy kwadrat z białym znakiem).
+vec3 axonUiIconColor(int style) {
+    if (style == 12) return vec3(0.33, 0.78, 0.47);
+    if (style == 13) return vec3(0.35, 0.58, 1.0);
+    if (style == 14) return vec3(1.0, 0.55, 0.24);
+    if (style == 15) return vec3(0.66, 0.47, 1.0);
+    if (style == 16) return vec3(1.0, 0.43, 0.67);
+    if (style == 18) return vec3(1.0, 0.78, 0.25);
+    if (style == 19) return vec3(0.45, 0.5, 0.58);
+    if (style == 20) return vec3(0.3, 0.78, 0.9);
+    if (style == 21) return vec3(1.0, 0.38, 0.45);
+    if (style == 22) return vec3(0.95, 0.62, 0.3);
+    if (style == 23) return vec3(0.35, 0.9, 0.85);
+    if (style == 24) return vec3(0.58, 0.6, 0.66);
+    if (style == 25) return vec3(0.3, 0.75, 0.68);
+    if (style == 26) return vec3(1.0, 0.72, 0.28);
+    if (style == 27) return vec3(0.4, 0.85, 0.4);
+    if (style == 28) return vec3(0.4, 0.55, 0.95);
+    if (style == 29) return vec3(0.72, 0.5, 0.95);
+    if (style == 30) return vec3(0.35, 0.62, 1.0);
+    if (style == 31) return vec3(0.95, 0.35, 0.35);
+    return AXON_UI_ACC;
 }
 
 vec4 axonUiBox() {
@@ -996,14 +1064,24 @@ vec4 axonUiBox() {
     bool lit = state == 1 || state == 3;
 
     if (style >= 12) {
-        float d = axonUiIcon(style, p);
-        vec3 ic = lit ? AXON_UI_ACC : vec3(0.82, 0.85, 0.9);
-        float cover = 1.0 - smoothstep(-aa * 0.75, aa * 0.75, d);
-        if (lit) {
-            vec4 glow = vec4(AXON_UI_ACC, 0.25 * (1.0 - smoothstep(0.0, 3.0, d)));
-            return axonUiOver(vec4(ic, cover), glow);
+        float v0 = clamp(p.y / size.y, 0.0, 1.0);
+        float gd = axonUiIcon(style, p - (size - 16.0) * 0.5);
+        float glyph = 1.0 - smoothstep(-aa * 0.75, aa * 0.75, gd);
+        if (state >= 2) {
+            // plakietka: kolorowy zaokrąglony kwadrat z białym znakiem; stan 3 = świeci (aktywna karta)
+            vec3 bc = axonUiIconColor(style);
+            float bd = axonRoundBox(p - size * 0.5, size * 0.5, 6.0);
+            float bin = 1.0 - smoothstep(-aa, aa, bd);
+            vec3 bcol = mix(bc * 1.12, bc * 0.78, v0);
+            bcol = mix(bcol, bcol + vec3(0.25), (1.0 - smoothstep(0.0, 1.2, -bd)) * (1.0 - v0));
+            vec4 o = vec4(mix(bcol, vec3(1.0), glyph * 0.95), bin);
+            vec4 under = state == 3
+                    ? vec4(bc, (0.35 + 0.1 * sin(t * 2.5)) * (1.0 - smoothstep(0.0, 7.0, bd)))
+                    : vec4(0.0, 0.0, 0.0, 0.3 * (1.0 - smoothstep(-1.0, 4.0, bd - 1.0)));
+            return axonUiOver(o, under);
         }
-        return vec4(ic, cover);
+        vec3 ic = state == 1 ? AXON_UI_ACC : vec3(0.82, 0.85, 0.9);
+        return vec4(ic, glyph);
     }
 
     float d = axonRoundBox(p - size * 0.5, size * 0.5, r);
@@ -1059,6 +1137,16 @@ vec4 axonUiBox() {
         alpha = mix(0.62, 0.74, v);
         rimTop = 0.38;
         rimBottom = 0.06;
+        // nagłówek: jaśniejszy pas z poświatą akcentu i linią, po której przesuwa się błysk
+        float head = 1.0 - smoothstep(56.0, 60.0, p.y);
+        col = mix(col, col + vec3(0.035) + AXON_UI_ACC * 0.05 * (1.0 - p.x / size.x), head);
+        float line = 1.0 - smoothstep(0.4, 1.2, abs(p.y - 58.0));
+        float shine = pow(0.5 + 0.5 * sin(t * 1.2 - p.x * 0.018), 6.0);
+        float fade = 1.0 - clamp(p.x / size.x, 0.0, 1.0) * 0.75;
+        col = mix(col, mix(AXON_UI_ACC, vec3(1.0), shine * 0.6), line * 0.75 * fade);
+        // drobna siatka kropek w części z treścią
+        vec2 g = mod(p + vec2(3.0), 14.0) - 7.0;
+        col += vec3(0.035) * (1.0 - smoothstep(0.5, 1.1, length(g))) * (1.0 - head);
     } else if (style == 2) {
         col = vec3(0.0);
         alpha = 0.18;
@@ -1101,6 +1189,13 @@ vec4 axonUiBox() {
     float rim = 1.0 - smoothstep(0.0, 1.2, -d);
     float rimA = mix(rimTop, rimBottom, v);
     vec3 rimCol = vec3(1.0);
+    if (style == 1) {
+        // obwódka okna: akcent wędruje dookoła
+        vec2 rc = p - size * 0.5;
+        float sweep = 0.5 + 0.5 * cos(atan(rc.y, rc.x * size.y / size.x) - t * 0.6);
+        rimCol = mix(vec3(1.0), AXON_UI_ACC, pow(sweep, 3.0));
+        rimA = mix(rimA, 0.75, pow(sweep, 3.0));
+    }
     if (hot) {
         rimCol = AXON_UI_ACC;
         rimA = 0.9;

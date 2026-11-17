@@ -601,13 +601,13 @@ bool axonMiniVertex() {
 //             stan: 0 zwykły, 1 aktywny, 2 wyłączony, 3 wciśnięty/zaznaczony
 #define AXON_UI_DEPTH 16.0
 #define AXON_UI_UNIT 0.25
-#define AXON_UI_STYLES 20
+#define AXON_UI_STYLES 32
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
     vec4(0.0, 0.0, 0.0, -0.9920),
     vec4(608.0, 356.0, 14.0, -0.9905),   // 1 panel okna
-    vec4(164.0, 300.0, 10.0, -0.9910),   // 2 pasek kart
-    vec4(148.0, 26.0, 8.0, -0.9920),     // 3 karta
+    vec4(164.0, 284.0, 10.0, -0.9910),   // 2 pasek kart
+    vec4(148.0, 28.0, 8.0, -0.9920),     // 3 karta
     vec4(124.0, 20.0, 10.0, -0.9920),    // 4 zakładka (pigułka)
     vec4(204.0, 40.0, 9.0, -0.9920),     // 5 kafel ustawienia
     vec4(416.0, 36.0, 9.0, -0.9915),     // 6 opis pod kursorem
@@ -616,14 +616,26 @@ const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
     vec4(416.0, 2.0, 1.0, -0.9915),      // 9 linia
     vec4(140.0, 16.0, 8.0, -0.9920),     // 10 plakietka
     vec4(30.0, 16.0, 8.0, -0.9930),      // 11 przełącznik (stan 1 = włączony)
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 12 ikona: mapa (kompas)
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 13 ikona: tablica (lista)
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 14 ikona: bronie (celownik)
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 15 ikona: rozmowy (dymek)
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 16 ikona: wygląd (paleta)
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 17 ikona: zębatka
-    vec4(16.0, 16.0, 0.0, -0.9930),      // 18 ikona: gwiazdka
-    vec4(16.0, 16.0, 0.0, -0.9930));     // 19 ikona: strzałka dalej
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 12 ikona: mapa (kompas)
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 13 ikona: tablica (lista)
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 14 ikona: bronie (celownik)
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 15 ikona: rozmowy (dymek)
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 16 ikona: wygląd (paleta)
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 17 ikona: zębatka
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 18 ikona: gwiazdka
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 19 ikona: strzałka dalej
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 20 ikona: lupa
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 21 ikona: serce
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 22 ikona: dom
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 23 ikona: rdzeń
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 24 ikona: krzyż
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 25 ikona: ramka
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 26 ikona: zegar
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 27 ikona: start
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 28 ikona: tarcza
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 29 ikona: oko
+    vec4(22.0, 22.0, 0.0, -0.9930),      // 30 ikona: informacja
+    vec4(22.0, 22.0, 0.0, -0.9930));      // 31 ikona: flaga
 
 vec4 axonUiClip(vec2 px, float z) {
     return vec4(px.x / 320.0 - 1.0, 1.0 - px.y / 192.0, z, 1.0);
@@ -665,7 +677,7 @@ bool axonUiVertex() {
     vec2 cur = axonCursor * vec2(640.0, 384.0);
     int vc = gl_VertexID % 4;
     vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
-    float pad = style >= 11 ? 2.0 : 10.0;
+    float pad = style == 11 ? 2.0 : (style >= 12 ? 7.0 : 10.0);
     if (style == 8) {
         org = cur - vec2(3.0);
         pad = 0.0;
