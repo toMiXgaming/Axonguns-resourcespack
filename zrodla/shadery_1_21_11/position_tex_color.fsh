@@ -25,7 +25,7 @@ out vec4 fragColor;
 // w [AXON_HUD_TIME, AXON_HUD_TIME + AXON_HUD_WINDOW) (OverlayLayout.HUD_TIME). Wtedy GUI chowa
 // hotbar, serduszka, pasek doświadczenia i celownik.
 #define AXON_HUD_TIME 12000.0
-#define AXON_HUD_WINDOW 60.0
+#define AXON_HUD_WINDOW 140.0
 
 bool axonMapOpen(float gameTime) {
     float t = gameTime * 24000.0;

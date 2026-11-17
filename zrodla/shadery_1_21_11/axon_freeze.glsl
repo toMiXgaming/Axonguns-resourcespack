@@ -1,5 +1,6 @@
 // Zamrożony świat przy otwartym oknie (nakładka AxonItems: /ustawienia, /mapa i inne).
-// Plugin ustawia czas gry w oknie [AXON_FREEZE_TIME, +AXON_FREEZE_WINDOW) (OverlayLayout.HUD_TIME)
+// Plugin ustawia czas gry w oknie [AXON_FREEZE_TIME, +AXON_FREEZE_WINDOW) (OverlayLayout.HUD_TIME,
+// FREEZE_WINDOW); klienci z modami (Sodium) dostają dalszą część okna HUD, bez zamrażania
 // i obraca gracza na yaw 0 / pitch 0. Mysz dalej obraca kamerę (z niej shader liczy kursor),
 // ale świat rysujemy ze stałego widoku yaw 0 / pitch 0 i stałego pola widzenia, więc stoi w miejscu.
 // Plugin poszerza pole widzenia gry na czas okna, żeby gra nie ucinała bloków poza prawdziwym
