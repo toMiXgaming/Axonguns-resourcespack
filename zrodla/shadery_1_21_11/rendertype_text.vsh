@@ -663,7 +663,10 @@ bool axonUiVertex() {
     if (a < 251.5 || a > 253.5) {
         return false;
     }
-    vec4 view = ModelViewMat * vec4(Position, 1.0);
+    // Encje okna mają billboard FIXED i yaw 180 (UiDisplays), więc ich układ to stały układ świata:
+    // lokalne x = -świat x, lokalne z = -świat z. Position to położenie względem kamery w świecie, więc
+    // nie zależy od obrotu kamery (billboard CENTER przechylał napisy przy patrzeniu góra-dół).
+    vec4 view = vec4(-Position.x, Position.y, -Position.z, 1.0);
     float az = abs(view.z);
     if (az > AXON_UI_FAR) {
         return false;
