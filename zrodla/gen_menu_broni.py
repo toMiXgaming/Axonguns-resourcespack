@@ -125,6 +125,8 @@ def tlo():
     cv.rect(x + 5, y + 14.5, 8, 1.2, TXT, None, r=0.5, alpha=255)
     # ekwipunek gracza (napis „Ekwipunek” rysuje klient w (8, 128))
     cv.rect(1, 126, 174, 95, BG, EDGE, r=5, width=0.67, alpha=225)
+    # napis „Ekwipunek” gra rysuje ciemnoszarym (0x404040): jasna plakietka pod nim
+    cv.rect(5, 126.5, 52, 11, (200, 204, 208), None, r=3, alpha=235)
     for r in range(3):
         for c in range(9):
             cv.rect(7 + 18 * c, 139 + 18 * r, 18, 18, TILE_BG, (66, 70, 74), r=2.5, alpha=200)
@@ -197,6 +199,17 @@ def generic_54_marker(src):
     return _png(img)
 
 
+# znaczniki w rogach podświetlenia slotu (alfa 1 = niewidoczne): po nich shader poznaje róg sprite'a
+HIGHLIGHT_CORNERS = {(0, 0): (11, 0, 0, 1), (23, 0): (12, 0, 0, 1), (0, 23): (13, 0, 0, 1), (23, 23): (14, 0, 0, 1)}
+
+
+def highlight_marker(src):
+    img = Image.open(io.BytesIO(src)).convert('RGBA')
+    for xy, color in HIGHLIGHT_CORNERS.items():
+        img.putpixel(xy, color)
+    return _png(img)
+
+
 def pliki(generic_54=None):
     files = {}
     img = tlo()
@@ -223,6 +236,11 @@ def pliki(generic_54=None):
         {'parent': 'minecraft:item/generated', 'textures': {'layer0': 'axon:item/menu_zablokowane'}}) + '\n').encode()
     files['assets/axon/items/menu_zablokowane.json'] = (json.dumps(
         {'model': {'type': 'minecraft:model', 'model': 'axon:item/menu_zablokowane'}}) + '\n').encode()
+    sprites = 'assets/minecraft/textures/gui/sprites/container/'
+    for name in ('slot_highlight_back', 'slot_highlight_front'):
+        src = os.path.join(HERE, 'menu_broni', name + '.png')
+        files[sprites + name + '.png'] = highlight_marker(open(src, 'rb').read())
+        files[sprites + name + '.png.mcmeta'] = open(src + '.mcmeta', 'rb').read()
     if generic_54 is not None:
         files['assets/minecraft/textures/gui/container/generic_54.png'] = generic_54_marker(generic_54)
     return files
