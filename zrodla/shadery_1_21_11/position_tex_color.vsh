@@ -19,6 +19,7 @@ layout(std140) uniform Globals {
     int MenuBlurRadius;
     int UseRgss;
 };
+#moj_import <minecraft:axon_freeze.glsl>
 
 uniform sampler2D Sampler0;
 
@@ -104,7 +105,7 @@ bool axonDeadHighlight(vec2 uv, vec2 guiPos, vec2 guiSize) {
 }
 
 void main() {
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    gl_Position = axonWorldProj(ProjMat) * axonWorldView(ModelViewMat, ProjMat) * vec4(Position, 1.0);
 
     texCoord0 = UV0;
     vertexColor = Color;

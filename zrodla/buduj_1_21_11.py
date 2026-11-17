@@ -19,6 +19,7 @@ SRC = os.path.join(ROOT, 'QualityArmory-21-axon.zip')
 OUT = os.path.join(ROOT, 'QualityArmory-21-axon-1.21.11-shadery.zip')
 SHADERS = os.path.join(HERE, 'shadery_1_21_11')
 TARGET = 'assets/minecraft/shaders/core/'
+INCLUDE = 'assets/minecraft/shaders/include/'
 DESCRIPTION = 'AXON 1.21.11: nowe modele broni na bazie QualityGuns 2.1.9 (shadery w formacie 1.21.11)'
 
 
@@ -31,8 +32,10 @@ def main():
         mcmeta = {'pack': {'min_format': 75, 'max_format': 75, 'description': DESCRIPTION}}
         dst.writestr('pack.mcmeta', json.dumps(mcmeta, indent=2, ensure_ascii=False) + '\n')
         for name in sorted(os.listdir(SHADERS)):
+            # *.glsl to wspólne kawałki (#moj_import <minecraft:...>), reszta to shadery core
+            target = INCLUDE if name.endswith('.glsl') else TARGET
             with open(os.path.join(SHADERS, name), 'rb') as f:
-                dst.writestr(TARGET + name, f.read())
+                dst.writestr(target + name, f.read())
     print('zapisano', os.path.basename(OUT))
     from atlas_bloku import patch as atlas_bloku
     from dodaj_barrier import patch as dodaj_barrier

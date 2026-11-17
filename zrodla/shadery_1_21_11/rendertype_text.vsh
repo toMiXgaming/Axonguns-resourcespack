@@ -4,6 +4,7 @@
 #moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
 #moj_import <minecraft:globals.glsl>
+#moj_import <minecraft:axon_freeze.glsl>
 
 #define AXON_SPRITES 5
 #define AXON_SPRITE_NIBBLES 21
@@ -72,8 +73,8 @@ void axonSetLim(int i, vec2 v) {
 #define AXON_ROWS 3
 // Kursor: o ile stopni trzeba obrócić głowę, żeby przejechać całą szerokość / wysokość mapy.
 // Plugin ustawia graczowi yaw 0 i pitch 0 przy otwarciu mapy (OverlayLayout.CURSOR_*).
-#define AXON_YAW_RANGE 180.0
-#define AXON_PITCH_RANGE 100.0
+#define AXON_YAW_RANGE 30.0
+#define AXON_PITCH_RANGE 18.0
 
 // Sprity: ruchome elementy mini gier rysuje shader (60+ fps), a serwer wysyła tylko tabelę parametrów.
 // Tabela leży w ostatnim wierszu kafla (piksel y=127, od x=8): każdy piksel to jeden z 16 kolorów
@@ -820,7 +821,7 @@ bool axonFullVertex() {
 }
 
 void main() {
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    gl_Position = axonWorldProj(ProjMat) * axonWorldView(ModelViewMat, ProjMat) * vec4(Position, 1.0);
     axonHud = 0;
     axonHudLocal = vec2(0.0);
     axonHudBox = vec4(0.0);
