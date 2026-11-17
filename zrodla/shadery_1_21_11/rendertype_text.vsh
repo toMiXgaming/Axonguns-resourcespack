@@ -599,9 +599,11 @@ bool axonMiniVertex() {
 //   alfa 252: pudełko; jeden znak = jedno pudełko: R = x / 2 (młodsze 8 bitów), G = y / 2,
 //             B = styl 5 bitów | stan 2 bity << 5 | najstarszy bit x / 2 << 7
 //             stan: 0 zwykły, 1 aktywny, 2 wyłączony, 3 wciśnięty/zaznaczony
-#define AXON_UI_DEPTH 16.0
+#define AXON_UI_DEPTH 1.0
 #define AXON_UI_UNIT 0.25
-// Warstwy w osi widoku (UiDisplays): napisy 16, przełączniki 200, pudełka 400, szyba 700, kursor 15.
+// Warstwy w osi widoku (UiDisplays): napisy 1, przełączniki 200, pudełka 400, szyba 700, kursor 0,5.
+// Napisy tuż przed kamerą: ich położenie to x, y w układzie kamery, więc obrót billboardu przesuwa je
+// o AXON_UI_DEPTH × kąt (przy 1 bloku niezauważalnie).
 // Klient sortuje przezroczyste quady od najdalszego, więc ta kolejność to kolejność rysowania.
 // Bez przesunięć w bok: przy szybkim ruchu myszą billboard bywa o ułamek stopnia obrócony względem
 // kamery, a wtedy daleki bok encji ucieka w osi widoku (dawniej rozjeżdżało to pudełka i napisy).
@@ -663,7 +665,7 @@ bool axonUiVertex() {
     }
     vec4 view = ModelViewMat * vec4(Position, 1.0);
     float az = abs(view.z);
-    if (az < AXON_UI_DEPTH - 3.0 || az > AXON_UI_FAR) {
+    if (az > AXON_UI_FAR) {
         return false;
     }
     float lvl = axonUiLayer(az);
