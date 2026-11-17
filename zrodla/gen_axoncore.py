@@ -26,6 +26,7 @@ from axoncore.crates import TEX as CRATE_TEX
 from axoncore import siarka
 from axoncore import znacznik_x
 from axoncore import tablica
+from axoncore import ui
 
 ATLAS_PNG = 'assets/axon/textures/block/axoncore_atlas.png'
 
@@ -69,6 +70,7 @@ def pliki():
         _przedmiot(files, name, {'parent': 'minecraft:item/generated', 'textures': {'layer0': 'axon:item/' + name}})
     files.update(znacznik_x.pliki())   # znacznik X na pniu przy ścinaniu drzew (axoncore/znacznik_x.py)
     files.update(tablica.pliki())   # tablica wyników AxonScoreboard: panel, logo, ikony, paski (axoncore/tablica.py)
+    files.update(ui.pliki())   # czcionka okien UI (Inter) i logo AXONCORE (axoncore/ui.py)
     files.update(siarka.pliki())   # Surowa Siarka: ruda siarki zamiast rudy miedzi i ikona grudki (axoncore/siarka.py)
     for key, m in T.items():   # narzędzia Axon jako przedmioty (items/*.json); modele i tekstury daje gen_narzedzia.py
         ns, name = key.split(':')
