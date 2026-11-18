@@ -633,5 +633,5 @@ DETAIL = {'ak47': d_ak47, 'm4a1s': d_m4a1s, 'remmington': d_remmington, 'makarov
 def apply(g):
     """Add the extra detail to a freshly built gun (idempotent per gun object)."""
     n0 = len(g.els)
-    DETAIL[g.name](g)
+    DETAIL.get(g.name, lambda g: None)(g)
     return len(g.els) - n0
