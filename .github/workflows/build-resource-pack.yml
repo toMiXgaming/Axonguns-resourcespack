@@ -28,18 +28,9 @@ jobs:
           python-version: "3.12"
       - name: Install generator dependencies
         run: python -m pip install --upgrade pillow numpy
-      - name: Generate resource files
+      - name: Rebuild shader variants and validate packs
         run: |
-          for script in zrodla/gen*.py; do
-            echo "Running $script"
-            python "$script"
-          done
-      - name: Build and validate packs
-        run: |
-          python zrodla/build_pack.py QualityArmory-21-axon.zip zrodla/QualityArmory-21-axon.zip
-          cp zrodla/QualityArmory-21-axon.zip QualityArmory-21-axon.zip
-          cp QualityArmory-21-axon.zip QualityArmory-21-axon-1.21.11.zip
-          python zrodla/buduj_1_21_11.py
+          python zrodla/dodaj_shadery.py
           python zrodla/sprawdz_paczke.py QualityArmory-21-axon.zip QualityArmory-21-axon-1.21.11.zip QualityArmory-21-axon-1.21.11-shadery.zip
       - uses: actions/upload-artifact@v4
         with:
