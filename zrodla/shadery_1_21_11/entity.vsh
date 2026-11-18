@@ -52,7 +52,7 @@ void main() {
 
     // ikona przedmiotu-bloku na kaflu okna (ItemDisplay ze znacznikiem światła, jak ikony w axon_gs_item.glsl):
     // bloki rysują się shaderem encji, nie przedmiotu, więc tu też kładziemy je na płótno
-    if (ProjMat[2][3] != 0.0 && UV2 == AXON_GS_ICON_LIGHT && axonGsTime()) {
+    if (false) { // A/B test: disable GUI projection for entity vertices
         vec3 p = Position / AXON_GS_UNIT;
         bool list = Position.z < -15.0;
         float z = (list ? -0.99500 : -0.99330) - clamp(p.z + (list ? 80.0 : 40.0), -8.0, 8.0) * 0.000005;
