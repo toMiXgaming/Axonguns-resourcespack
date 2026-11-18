@@ -6,6 +6,13 @@ bool axonGsItem(mat4 proj) {
     axonGsB = vec4(0.0);
     axonGsP = vec2(0.0);
     if (proj[2][3] == 0.0 || !axonGsTime()) return false;
+    // First-person items use an unrotated view near the camera.
+    // Run this after initializing the fragment shader varyings.
+    mat3 view = mat3(ModelViewMat);
+    float rotationDelta = length(view[0] - vec3(1.0, 0.0, 0.0))
+                        + length(view[1] - vec3(0.0, 1.0, 0.0))
+                        + length(view[2] - vec3(0.0, 0.0, 1.0));
+    if (rotationDelta < 0.0001 && dot(Position, Position) < 9.0) return false;
     if (UV2 == AXON_GS_LINK_LIGHT) {
         ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
         vec2 b = vec2(float(c.r | ((c.b >> 7) << 8)), float(c.g)) * 2.0;

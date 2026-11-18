@@ -74,8 +74,8 @@ void axonSetLim(int i, vec2 v) {
 #define AXON_ROWS 3
 // Kursor: o ile stopni trzeba obrócić głowę, żeby przejechać całą szerokość / wysokość mapy.
 // Plugin ustawia graczowi yaw 0 i pitch 0 przy otwarciu mapy (OverlayLayout.CURSOR_*).
-#define AXON_YAW_RANGE 30.0
-#define AXON_PITCH_RANGE 18.0
+#define AXON_YAW_RANGE 45.0
+#define AXON_PITCH_RANGE 27.0
 
 // Sprity: ruchome elementy mini gier rysuje shader (60+ fps), a serwer wysyła tylko tabelę parametrów.
 // Tabela leży w ostatnim wierszu kafla (piksel y=127, od x=8): każdy piksel to jeden z 16 kolorów
@@ -928,7 +928,9 @@ void main() {
         int tx = tile % cols;
         int ty = tile / cols;
         vec2 topLeft = vec2(-1.0 + float(tx) * tileSize.x, 1.0 - float(ty) * tileSize.y);
-        gl_Position = vec4(topLeft + vec2(UV0.x * tileSize.x, -UV0.y * tileSize.y), -0.99, 1.0);
+        vec2 overlap = 2.0 / ScreenSize; // jedna pikselowa zakładka usuwa szczeliny między mapowymi kaflami
+        vec2 edge = vec2(UV0.x < 0.5 ? -overlap.x : overlap.x, UV0.y < 0.5 ? overlap.y : -overlap.y);
+        gl_Position = vec4(topLeft + vec2(UV0.x * tileSize.x, -UV0.y * tileSize.y) + edge, -0.99, 1.0);
         vertexDistance = 0.0;
     }
 }
