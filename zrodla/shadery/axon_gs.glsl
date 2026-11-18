@@ -18,7 +18,9 @@ bool axonGsTime() {
 }
 
 // Zegar okna: plugin trzyma czas gry w [12000, 12040) zgodnie z fazą serwera (mod 40), więc co 40 ticków
-// (2 s) wraca do tej samej fazy. Bujanie ma okres 2 s albo jego ułamki, żeby nie przeskakiwało.
+// (2 s) wraca do tej samej fazy. Bujanie ma okres 2 s, żeby nie przeskakiwało; o połowę wolniejsze
+// od pierwszej wersji: dłuższego okresu zegar nie da, więc kąty są o połowę mniejsze, a ruch w pionie
+// ma okres 2 s zamiast 1 s. Linie liczą położenie tą samą funkcją, więc zostają przy kropkach.
 float axonGsPhase() {
     return mod(GameTime * 24000.0 - 12000.0, 40.0) / 40.0 * 6.2831853;
 }
@@ -26,9 +28,9 @@ float axonGsPhase() {
 // Obrót bujania (lekkie oddychanie w rękach) i przesunięcie w pikselach płótna.
 mat3 axonGsSwayRot() {
     float th = axonGsPhase();
-    float rz = 0.0055 * sin(th);              // przechył
-    float rx = 0.0100 * sin(th + 1.9);        // góra-dół wokół osi lufy
-    float ry = 0.0160 * sin(th + 0.7);        // lekki obrót w bok
+    float rz = 0.00275 * sin(th);              // przechył
+    float rx = 0.0050 * sin(th + 1.9);        // góra-dół wokół osi lufy
+    float ry = 0.0080 * sin(th + 0.7);        // lekki obrót w bok
     float cz = cos(rz), sz = sin(rz), cx = cos(rx), sx = sin(rx), cy = cos(ry), sy = sin(ry);
     mat3 mz = mat3(cz, sz, 0.0, -sz, cz, 0.0, 0.0, 0.0, 1.0);
     mat3 mx = mat3(1.0, 0.0, 0.0, 0.0, cx, sx, 0.0, -sx, cx);
@@ -38,7 +40,7 @@ mat3 axonGsSwayRot() {
 
 vec2 axonGsSwayShift() {
     float th = axonGsPhase();
-    return vec2(0.8 * sin(th + 2.4), 1.4 * sin(2.0 * th + 0.4));
+    return vec2(0.4 * sin(th + 2.4), 1.4 * sin(th + 0.4));
 }
 
 // Punkt broni w płótnie (y w dół) z głębokością z (w stronę gracza) → płótno po bujaniu, z po obrocie.
