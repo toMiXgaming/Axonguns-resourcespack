@@ -15,6 +15,7 @@ uniform float FogStart;
 uniform float FogEnd;
 uniform vec4 FogColor;
 uniform float GameTime;
+uniform vec2 ScreenSize;
 
 in vec3 axonSm;
 #define vertexDistance axonSm.x
@@ -1052,6 +1053,66 @@ vec3 axonUiIconColor(int style) {
     return AXON_UI_ACC;
 }
 
+// --- tło menu akcesoriów: szum, dym, iskry (zegar okna wraca co 40 ticków, więc wszystko ma okres 2 s) ---
+float axonN2(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = axonHash(dot(i, vec2(1.0, 157.0)));
+    float b = axonHash(dot(i + vec2(1.0, 0.0), vec2(1.0, 157.0)));
+    float c = axonHash(dot(i + vec2(0.0, 1.0), vec2(1.0, 157.0)));
+    float d = axonHash(dot(i + vec2(1.0, 1.0), vec2(1.0, 157.0)));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float axonFbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    // dwie warstwy szumu (wcześniej cztery): przy rozmytym dymie trzecia i czwarta nie były widoczne;
+    // wynik przeskalowany do zakresu dawnych czterech warstw
+    for (int i = 0; i < 2; i++) {
+        v += a * axonN2(p);
+        p = p * 2.03 + vec2(17.1, 9.3);
+        a *= 0.5;
+    }
+    return v * 1.25;
+}
+
+float axonSmoke(vec2 q, float t) {
+    float ph = fract(t * 0.5);
+    vec2 vel = vec2(26.0, -10.0);
+    vec2 s = q * vec2(0.010, 0.016);
+    // bez zawijania domeny (dwa dodatkowe szumy na piksel): falowanie daje tani sinus
+    s.x += 0.25 * sin(s.y * 3.0 + ph * 6.2831853);
+    float a = axonFbm(s + vel * 0.01 * ph);
+    float b = axonFbm(s + vel * 0.01 * fract(ph + 0.5) + vec2(5.2, 1.3));
+    float w = abs(2.0 * ph - 1.0);
+    return mix(a, b, w);
+}
+
+vec3 axonEmbers(vec2 q, float t) {
+    vec3 acc = vec3(0.0);
+    float cyc = floor(t * 0.5);
+    float ph = fract(t * 0.5);
+    for (int k = 0; k < 2; k++) {
+        float lane = 16.0 + float(k) * 7.0;
+        float col = floor(q.x / lane);
+        float seed = col * 3.7 + float(k) * 91.0 + cyc * 13.1;
+        float on = step(0.55, axonHash(seed));
+        float x0 = (col + 0.2 + 0.6 * axonHash(seed + 1.0)) * lane;
+        float life = fract(ph + axonHash(seed + 2.0));
+        float y = 392.0 - life * (90.0 + 120.0 * axonHash(seed + 3.0));
+        float x = x0 + sin(life * 6.2831 + seed) * 4.0;
+        float d = length(q - vec2(x, y));
+        float fade = smoothstep(0.0, 0.15, life) * (1.0 - smoothstep(0.55, 1.0, life));
+        vec3 c = mix(vec3(1.0, 0.55, 0.18), AXON_UI_ACC, axonHash(seed + 4.0) * 0.6);
+        // jeden wykładnik zamiast dwóch: rdzeń i blask z tej samej krzywej
+        float g = exp(-d * 0.25);
+        acc += c * on * fade * (g * g * g * g * 1.4 + g * 0.25);
+    }
+    return acc;
+}
+
 vec4 axonUiBox() {
     vec2 size = axonHudBox.xy;
     int style = int(axonHudBox.z + 0.5);
@@ -1073,7 +1134,69 @@ vec4 axonUiBox() {
         vec3 vc = vec3(0.015, 0.02, 0.03) + AXON_UI_ACC * 0.05 * (1.0 - smoothstep(0.0, 360.0, length(q - vec2(600.0, -20.0))));
         vc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0))) - 0.5) * 0.02;
         // stan 1 (menu akcesoriów): ciemniej i mocniejsza winieta, broń ma odciąć się od świata
-        if (state == 1) return vec4(vc, 0.8 + 0.18 * smoothstep(0.1, 0.7, length(e * vec2(1.15, 1.0))));
+        if (state == 1) {
+            // współrzędne z ekranu: szyba to kilka glifów, a ich lokalne położenie nie łączy się idealnie
+            q = vec2(gl_FragCoord.x / ScreenSize.x * 640.0, (1.0 - gl_FragCoord.y / ScreenSize.y) * 384.0);
+            e = q / vec2(640.0, 384.0) - 0.5;
+            // tło: ciemny gradient, snop światła z góry na walizkę, dym przy podłodze i iskry
+            vec3 bgc = mix(vec3(0.03, 0.035, 0.045), vec3(0.008, 0.01, 0.014), smoothstep(0.0, 384.0, q.y));
+            bgc += vec3(0.01, 0.014, 0.02) * (1.0 - smoothstep(0.0, 0.8, length(e * vec2(1.15, 1.0))));
+            // drobna siatka podłogi w perspektywie (dolna część ekranu)
+            float fy = clamp((q.y - 250.0) / 134.0, 0.0, 1.0);
+            if (fy > 0.0) {
+                float persp = 1.0 / (0.15 + fy);
+                vec2 fg = vec2((q.x - 412.0) * persp * 0.06, persp * 3.0);
+                vec2 gl = abs(fract(fg) - 0.5);
+                float line = 1.0 - smoothstep(0.0, 0.04 * persp, min(gl.x, gl.y));
+                bgc += AXON_UI_ACC * 0.10 * line * fy * (1.0 - smoothstep(80.0, 330.0, abs(q.x - 412.0)));
+            }
+            vec2 cc = vec2(412.0, 158.0);
+            vec2 half_ = vec2(182.0, 92.0);
+            float pulse = 0.5 + 0.5 * sin(t * 3.14159);
+            // snop światła: stożek z góry, lekko migocze
+            float bx = abs(q.x - cc.x) / (60.0 + q.y * 0.55);
+            float beam = (1.0 - smoothstep(0.6, 1.0, bx)) * smoothstep(-20.0, 120.0, q.y) * (1.0 - smoothstep(250.0, 330.0, q.y));
+            bgc += vec3(0.55, 0.7, 0.85) * 0.09 * beam * (0.85 + 0.15 * pulse);
+            // poświata pod walizką na podłodze
+            vec2 pd = (q - vec2(cc.x, 268.0)) / vec2(210.0, 22.0);
+            float pool = exp(-dot(pd, pd));
+            bgc += AXON_UI_ACC * 0.18 * pool * (0.8 + 0.2 * pulse);
+            // walizka
+            float sd = axonRoundBox(q - cc, half_, 10.0);
+            float shadow = 0.6 * (1.0 - smoothstep(-2.0, 18.0, sd - 2.0));
+            bgc = mix(bgc, vec3(0.0), shadow);
+            float shell = 1.0 - smoothstep(-0.8, 0.8, sd);
+            vec3 steel = mix(vec3(0.2, 0.215, 0.24), vec3(0.08, 0.09, 0.11), clamp((q.y - (cc.y - half_.y)) / (2.0 * half_.y), 0.0, 1.0));
+            // połysk przesuwający się po krawędzi co 2 s
+            float sweep = 1.0 - smoothstep(0.0, 30.0, abs(q.x - mix(cc.x - half_.x - 60.0, cc.x + half_.x + 60.0, fract(t * 0.5))));
+            float rim = 1.0 - smoothstep(0.0, 1.8, abs(sd + 1.0));
+            steel += AXON_UI_ACC * (0.06 + 0.35 * sweep) * rim;
+            bgc = mix(bgc, steel, shell);
+            float id = axonRoundBox(q - cc, half_ - 9.0, 5.0);
+            float inner = 1.0 - smoothstep(-0.8, 0.8, id);
+            vec2 g = (q - cc) * 0.2;
+            float diamond = abs(fract(g.x + g.y) - 0.5) + abs(fract(g.x - g.y) - 0.5);
+            vec3 foam = vec3(0.055, 0.06, 0.072) + 0.025 * smoothstep(0.6, 0.95, diamond);
+            foam *= 0.6 + 0.4 * smoothstep(-16.0, 0.0, id);
+            foam += vec3(0.55, 0.7, 0.85) * 0.04 * (1.0 - smoothstep(0.0, 1.0, abs(q.x - cc.x) / half_.x)) * (1.0 - smoothstep(cc.y - half_.y, cc.y + half_.y, q.y));
+            bgc = mix(bgc, foam, inner);
+            for (int k = 0; k < 2; k++) {
+                float lx = cc.x + (k == 0 ? -96.0 : 96.0);
+                float ld = axonRoundBox(q - vec2(lx, cc.y + half_.y - 1.0), vec2(14.0, 5.0), 2.0);
+                bgc = mix(bgc, vec3(0.32, 0.34, 0.38) + AXON_UI_ACC * 0.15 * sweep, 1.0 - smoothstep(-0.6, 0.6, ld));
+            }
+            // dym przy dole ekranu (nad podłogą, pod napisami)
+            // szum liczony tylko w dolnej części ekranu, gdzie dym jest widoczny
+            float smMask = smoothstep(190.0, 360.0, q.y);
+            float dens = smMask > 0.0 ? smoothstep(0.28, 0.78, axonSmoke(q, t)) * smMask : 0.0;
+            vec3 smc = mix(vec3(0.35, 0.4, 0.48), AXON_UI_ACC * 0.8, 0.25);
+            bgc = mix(bgc, smc, dens * 0.55);
+            // iskry
+            if (q.y > 170.0) bgc += axonEmbers(q, t) * (0.6 + 0.4 * smMask);
+            // ziarno
+            bgc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.012;
+            return vec4(bgc, 1.0);
+        }
         return vec4(vc, 0.5 + 0.25 * vig);
     }
 
