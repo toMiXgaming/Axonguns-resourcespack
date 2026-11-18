@@ -14,7 +14,7 @@
 
 bool axonGsTime() {
     float t = GameTime * 24000.0;
-    return t >= 12000.0 && t < 12060.0;
+    return t >= 12000.0 && t < 12140.0;  // AXON_HUD_WINDOW 140 (80–140: klienci z modami, bez zamrażania)
 }
 
 // Zegar okna: plugin trzyma czas gry w [12000, 12040) zgodnie z fazą serwera (mod 40), więc co 40 ticków
