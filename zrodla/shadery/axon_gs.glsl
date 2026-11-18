@@ -10,7 +10,7 @@
 #define AXON_GS_GUN_LIGHT ivec2(208, 32)
 #define AXON_GS_ICON_LIGHT ivec2(208, 48)
 // środek obrotu broni przy bujaniu (GunsmithLayout.GUN_X, GUN_Y)
-#define AXON_GS_PIVOT vec2(412.0, 182.0)
+#define AXON_GS_PIVOT vec2(412.0, 160.0)
 
 bool axonGsTime() {
     float t = GameTime * 24000.0;

@@ -6,6 +6,7 @@
 #moj_import <minecraft:projection.glsl>
 #moj_import <minecraft:globals.glsl>
 #moj_import <minecraft:axon_freeze.glsl>
+#moj_import <minecraft:axon_gs.glsl>
 
 in vec3 Position;
 in vec4 Color;
@@ -48,6 +49,20 @@ void main() {
     lightMapColor = texelFetch(Sampler2, UV2 / 16, 0);
 #endif
     overlayColor = texelFetch(Sampler1, UV1, 0);
+
+    // ikona przedmiotu-bloku na kaflu okna (ItemDisplay ze znacznikiem światła, jak ikony w axon_gs_item.glsl):
+    // bloki rysują się shaderem encji, nie przedmiotu, więc tu też kładziemy je na płótno
+    if (ProjMat[2][3] != 0.0 && UV2 == AXON_GS_ICON_LIGHT && axonGsTime()) {
+        vec3 p = Position / AXON_GS_UNIT;
+        bool list = Position.z < -15.0;
+        float z = (list ? -0.99500 : -0.99330) - clamp(p.z + (list ? 80.0 : 40.0), -8.0, 8.0) * 0.000005;
+        gl_Position = axonGsClip(vec2(320.0 + p.x, 192.0 - p.y), z);
+        sphericalVertexDistance = 0.0;
+        cylindricalVertexDistance = 0.0;
+#ifndef EMISSIVE
+        lightMapColor = vec4(1.0);
+#endif
+    }
 
     texCoord0 = UV0;
 #ifdef APPLY_TEXTURE_MATRIX
