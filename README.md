@@ -26,6 +26,13 @@ Paczka zasobów do QualityArmory na Paper 1.21.4, działa na klientach od 1.21 d
 | PPSh-41 | crossbow | 54 | `qualityarmory:gun/ppsh41` |
 | RPG-7 | crossbow | 9 | `qualityarmory:gun/rpg` |
 | Glock 17 | crossbow | 86 (nowy, QA nie ma tej broni) | `qualityarmory:gun/glock` |
+| Samopał | crossbow | 87 (tylko AxonGuns) | `qualityarmory:gun/samopal` |
+| Rurówka | crossbow | 88 (tylko AxonGuns) | `qualityarmory:gun/ruroowka` |
+| Muszkiet | crossbow | 89 (tylko AxonGuns) | `qualityarmory:gun/muszkiet` |
+| Rewolwer | crossbow | 90 (tylko AxonGuns) | `qualityarmory:gun/rewolwer` |
+| Dubeltówka | crossbow | 91 (tylko AxonGuns) | `qualityarmory:gun/dubeltowka` |
+
+Tanie bronie AxonGuns (87–91: trzy domowe na Stół T0 i dwie na T1) są w `gen.py` (`TANIE`), bez skinów; transformacje biorą od Makarova, Remingtona i Kar98k (`display_qa.json`). Dopisanie do gotowych zipów: `zrodla/dodaj_bronie_tanie.py`, potem `zrodla/gen_axonguns.py` na każdym zipie.
 
 Cztery ostatnie bronie (AS Val, PPSh-41, RPG-7, Glock) mają też po 7 skinów premium (numery 281–317, tabela niżej). Glock ma w paczce numer 86 (wolny, oryginalne numery QA kończą się na 85), więc w configu QualityArmory trzeba ustawić mu `id: 86` i materiał CROSSBOW. Dopisanie do gotowych zipów: `zrodla/dodaj_bronie_4.py`, pełna przebudowa `build_pack.py` też je uwzględnia.
 

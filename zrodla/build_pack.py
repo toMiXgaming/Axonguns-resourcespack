@@ -14,14 +14,14 @@ One zip for every 1.21.x (pack.mcmeta lists formats 34-75 and the overlays):
 import hashlib, io, json, os, sys, zipfile
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen import SKINS
+from gen import SKINS, TANIE, NEW_GUNS
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = sys.argv[1] if len(sys.argv) > 1 else '/tmp/qa/QA21.zip'
 DST = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, 'QualityArmory-21-axon.zip')
 GUNS = ['ak47', 'm4a1s', 'remmington', 'makarov', 'awp', 'mac10', 'm16', 'sks',
         'deagle', 'sw1911', 'p30', 'mp5', 'uzi', 'sg553', 'famas', 'dragunov', 'kar98k', 'spas',
-        'asval', 'ppsh41', 'glock', 'rpg'] + list(SKINS)
+        'asval', 'ppsh41', 'glock', 'rpg'] + list(TANIE) + list(SKINS)
 ITEMS = 'assets/minecraft/items/crossbow.json'
 ATLAS = 'assets/minecraft/atlases/blocks.json'
 DROP = ('assets/minecraft/shaders/',   # base pack shaders from an older build: now in overlays only
@@ -99,7 +99,10 @@ def main():
         mj = open(os.path.join(HERE, 'build', g + '.json'), 'rb').read()
         png = open(os.path.join(HERE, 'build', g + '.png'), 'rb').read()
         qa = SKINS[g][0] if g in SKINS else g          # a skin carries its base gun's transforms
-        need = json.loads(zin.read('assets/qualityarmory/models/gun/%s.json' % qa)).get('display', {}).keys()
+        try:
+            need = json.loads(zin.read('assets/qualityarmory/models/gun/%s.json' % qa)).get('display', {}).keys()
+        except KeyError:      # broń bez modelu w QA (tanie bronie AxonGuns): transformacje z display_qa.json
+            need = json.load(open(os.path.join(HERE, 'display_qa.json')))[qa].keys()
         errs, n = validate(mj, png, g, set(need) | {'firstperson_lefthand'})
         if errs:
             raise SystemExit('%s: %s' % (g, errs))
@@ -119,6 +122,12 @@ def main():
     items = json.loads(zin.read(ITEMS))
     ent = items['model']['entries']
     for n, (base, _, cmd, _) in SKINS.items():
+        ref = 'qualityarmory:gun/' + n
+        if any(e['threshold'] == cmd and e['model'].get('model') != ref for e in ent):
+            raise SystemExit('custom_model_data %d already used' % cmd)
+        ent[:] = [e for e in ent if e['threshold'] != cmd]
+        ent.append({'threshold': cmd, 'model': {'type': 'model', 'model': ref}})
+    for n, cmd in NEW_GUNS.items():      # bronie bez numeru w QA (Glock, tanie bronie AxonGuns)
         ref = 'qualityarmory:gun/' + n
         if any(e['threshold'] == cmd and e['model'].get('model') != ref for e in ent):
             raise SystemExit('custom_model_data %d already used' % cmd)
