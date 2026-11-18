@@ -73,8 +73,15 @@ void axonSetLim(int i, vec2 v) {
 #define AXON_ROWS 3
 // Kursor: o ile stopni trzeba obrócić głowę, żeby przejechać całą szerokość / wysokość mapy.
 // Plugin ustawia graczowi yaw 0 i pitch 0 przy otwarciu mapy (OverlayLayout.CURSOR_*).
-#define AXON_YAW_RANGE 45.0
-#define AXON_PITCH_RANGE 27.0
+const vec2 AXON_ITEMS_CURSOR_RANGE = vec2(60.0, 36.0);
+const vec2 AXON_PLOT_CURSOR_RANGE = vec2(180.0, 120.0);
+
+vec2 axonCursorAt(vec2 range) {
+    vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
+    float yaw = degrees(atan(-forward.x, forward.z));
+    float pitch = degrees(asin(clamp(-forward.y, -1.0, 1.0)));
+    return clamp(vec2(0.5) + vec2(yaw, pitch) / range, 0.0, 1.0);
+}
 
 // Sprity: ruchome elementy mini gier rysuje shader (60+ fps), a serwer wysyła tylko tabelę parametrów.
 // Tabela leży w ostatnim wierszu kafla (piksel y=127, od x=8): każdy piksel to jeden z 16 kolorów
@@ -721,10 +728,7 @@ bool axonUiVertex() {
         org.y += 6.0 * (1.0 - show);
     }
     // kursor jak w kaflach mapy: z obrotu kamery, w pikselach płótna 640 × 384
-    vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
-    float yaw = degrees(atan(-forward.x, forward.z));
-    float pitch = degrees(asin(clamp(-forward.y, -1.0, 1.0)));
-    axonCursor = clamp(vec2(0.5 + yaw / AXON_YAW_RANGE, 0.5 + pitch / AXON_PITCH_RANGE), 0.0, 1.0);
+    axonCursor = axonCursorAt(AXON_ITEMS_CURSOR_RANGE);
     vec2 cur = axonCursor * vec2(640.0, 384.0);
     int vc = gl_VertexID % 4;
     vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
@@ -920,11 +924,15 @@ void main() {
         if (texelFetch(Sampler0, ivec2(32, 0), 0).a < 0.5) {
             axonHud = 9;
         }
-        // Kierunek kamery z ModelViewMat (świat -> widok): przód = -trzeci wiersz macierzy.
-        vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
-        float yaw = degrees(atan(-forward.x, forward.z));
-        float pitch = degrees(asin(clamp(-forward.y, -1.0, 1.0)));
-        axonCursor = clamp(vec2(0.5 + yaw / AXON_YAW_RANGE, 0.5 + pitch / AXON_PITCH_RANGE), 0.0, 1.0);
+        // AxonPlot zapisuje identyfikator 0x96 obok numeru kafla 5x3.
+        vec3 white = texelFetch(Sampler0, ivec2(0, 0), 0).rgb;
+        vec3 black = texelFetch(Sampler0, ivec2(1, 0), 0).rgb;
+        bool plot = axonDensity == 1;
+        for (int x = 0; x < 8 && plot; x++) {
+            vec3 expected = (150 & (1 << x)) != 0 ? white : black;
+            plot = texelFetch(Sampler0, ivec2(24 + x, 0), 0).rgb == expected;
+        }
+        axonCursor = axonCursorAt(plot ? AXON_PLOT_CURSOR_RANGE : AXON_ITEMS_CURSOR_RANGE);
         // Mapa wypełnia cały ekran (przy 16:9 jest lekko rozciągnięta w poziomie).
         int cols = AXON_COLS * axonDensity;
         int rows = AXON_ROWS * axonDensity;
