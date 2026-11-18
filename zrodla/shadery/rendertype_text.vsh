@@ -74,8 +74,8 @@ void axonSetLim(int i, vec2 v) {
 #define AXON_ROWS 3
 // Kursor: o ile stopni trzeba obrócić głowę, żeby przejechać całą szerokość / wysokość mapy.
 // Plugin ustawia graczowi yaw 0 i pitch 0 przy otwarciu mapy (OverlayLayout.CURSOR_*).
-#define AXON_YAW_RANGE 30.0
-#define AXON_PITCH_RANGE 18.0
+#define AXON_YAW_RANGE 45.0
+#define AXON_PITCH_RANGE 27.0
 
 // Sprity: ruchome elementy mini gier rysuje shader (60+ fps), a serwer wysyła tylko tabelę parametrów.
 // Tabela leży w ostatnim wierszu kafla (piksel y=127, od x=8): każdy piksel to jeden z 16 kolorów
