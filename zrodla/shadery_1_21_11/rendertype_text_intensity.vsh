@@ -25,7 +25,7 @@ out vec2 texCoord0;
 #define AXON_UI_UNIT 0.25
 #define AXON_UI_ANIM 100.0   // jak w rendertype_text.vsh; napisy mają warstwę AXON_UI_DEPTH
 #define AXON_HUD_TIME 12000.0
-#define AXON_HUD_WINDOW 60.0
+#define AXON_HUD_WINDOW 140.0
 
 bool axonUiLabel() {
     float t = GameTime * 24000.0;

@@ -202,7 +202,7 @@ void axonReadSprites() {
 // w [AXON_HUD_TIME, AXON_HUD_TIME + AXON_HUD_WINDOW) (OverlayLayout.HUD_TIME). Wtedy GUI chowa
 // hotbar, serduszka, pasek doświadczenia i celownik.
 #define AXON_HUD_TIME 12000.0
-#define AXON_HUD_WINDOW 60.0
+#define AXON_HUD_WINDOW 140.0
 
 bool axonMapOpen(float gameTime) {
     float t = gameTime * 24000.0;
@@ -541,7 +541,29 @@ bool axonMiniVertex() {
         vec2 a = vec2(float((bits >> 3) & 7), float(bits & 7)) * 16.0;
         axonMiniA = vec4(a - Position.xz - d * 128.0, 5.0, float(s));
         axonMiniB = vec4(vec2(t0), f);
-        l = cv * 2.0 - 1.0;
+        // Quad tylko na tę część minimapy, którą zajmuje ten kafel (zamiast całej minimapy dla każdego z
+        // nawet 9 kafli): mniej pikseli do policzenia, a wynik ten sam. Zapas 4 bloków na próbki wygładzania.
+        float range = AXON_MINI_RANGE[(s >> 4) & 3];
+        vec2 lo = vec2(1e9);
+        vec2 hi = vec2(-1e9);
+        vec2 rr = vec2(-f.y, f.x);
+        bool rot = ((s >> 7) & 1) == 1;
+        for (int i = 0; i < 4; i++) {
+            vec2 q = vec2(i == 1 || i == 2 ? 132.0 : -4.0, i >= 2 ? 132.0 : -4.0) - axonMiniA.xy;
+            vec2 m = (rot ? vec2(dot(q, rr), -dot(q, f)) : q) / range;
+            lo = min(lo, m);
+            hi = max(hi, m);
+        }
+        lo = max(lo, vec2(-1.0));
+        hi = min(hi, vec2(1.0));
+        if (lo.x >= hi.x || lo.y >= hi.y) {
+            gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+            axonMiniL = vec2(0.0);
+            vertexColor = vec4(1.0);
+            texCoord0 = UV0;
+            return true;
+        }
+        l = mix(lo, hi, cv);
         z = -0.992;
     } else {
         ivec2 t0 = ivec2(floor(UV0 * atlas - cv + 0.5));
