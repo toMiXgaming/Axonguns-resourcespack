@@ -66,10 +66,7 @@ bool axonGsUiVertex() {
         }
         org.y += 6.0 * (1.0 - show);
     }
-    vec3 forward = -vec3(ModelViewMat[0][2], ModelViewMat[1][2], ModelViewMat[2][2]);
-    float yaw = degrees(atan(-forward.x, forward.z));
-    float pitch = degrees(asin(clamp(-forward.y, -1.0, 1.0)));
-    axonCursor = clamp(vec2(0.5 + yaw / AXON_YAW_RANGE, 0.5 + pitch / AXON_PITCH_RANGE), 0.0, 1.0);
+    axonCursor = axonCursorAt(AXON_ITEMS_CURSOR_RANGE);
     int vc = gl_VertexID % 4;
     vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
     vec2 local = mix(vec2(-pad), size + pad, cv);
