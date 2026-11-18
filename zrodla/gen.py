@@ -2998,254 +2998,315 @@ def ads_display(g, disp):
 
 # ------------------------------------------------------------------ cheap guns (AxonGuns, no QA model)
 # Homemade starter guns (samopal, ruroowka, muszkiet) and cheap tier-1 guns (rewolwer, dubeltowka).
-# Each borrows the QA frame and display of a similar gun (makarov, remmington, kar98k); see DISPLAY_OF.
-MATS['rust'] = dict(kind='metal', base=(92, 64, 44), wear=(150, 110, 78), var=0.2, edge=0.5)
-MATS['pipe'] = dict(kind='metal', base=(104, 106, 108), wear=(168, 170, 172), var=0.16, edge=0.6)
-MATS['tape'] = dict(kind='poly', base=(44, 46, 52), wear=(78, 80, 86), var=0.08, edge=0.3)
-MATS['plank'] = dict(kind='wood', light=(176, 140, 92), dark=(118, 86, 50), wear=(204, 176, 132), edge=0.35)
+# Each borrows the QA frame and display of a similar gun (makarov, remmington, kar98k; DISPLAY_OF).
+# The frame origin is shifted so the grip lands where the donor gun's grip is, i.e. in the player's hand.
+MATS['rust'] = dict(kind='metal', base=(98, 66, 44), wear=(160, 116, 80), var=0.2, edge=0.55)
+MATS['pipe'] = dict(kind='metal', base=(110, 112, 114), wear=(176, 178, 180), var=0.14, edge=0.65)
+MATS['tape'] = dict(kind='poly', base=(112, 116, 120), wear=(168, 172, 176), var=0.07, edge=0.4)
+MATS['plank'] = dict(kind='wood', light=(188, 150, 98), dark=(126, 92, 54), wear=(214, 184, 138), edge=0.4)
 
 
 def build_samopal():
-    L = 9.0
+    """Zip pistol: pipe barrel clamped to a bar frame, welded box receiver, taped wooden grip."""
     k = 3.8125 / 7.8
-    g = Gun('samopal', dict(s=1, k=k, kw=k * 1.25, Xm=4.5625, Yb=5.4, Zc=4.5))
+    g = Gun('samopal', dict(s=1, k=k, kw=k * 1.25, Xm=4.5625 - (8.7 - 6.0) * k, Yb=5.4, Zc=4.5))
     g.density = 9.0
     B, C = g.b, g.cyl
-    # --- pipe barrel held by two hose clamps on a flat-bar frame
-    C('barrel', (0.0, 6.2), 0.15, 0.36, 'pipe')
-    for i, u in enumerate((0.9, 4.3)):
-        B('clamp%d' % i, (u, u + 0.32), (-0.42, 0.6), 0.46, 'parts')
-        B('clamp%d_screw' % i, (u + 0.05, u + 0.27), (-0.2, 0.2), (0.46, 0.62), 'parts')
-    B('frame', (0.6, 6.2), (-0.62, -0.3), 0.3, 'rust')
-    B('fs_post', (0.3, 0.6), (0.5, 0.82), 0.07, 'steel')
-    # --- welded box receiver, striker knob, notch made from two screws
-    B('receiver', (5.8, 8.4), (-0.62, 0.58), 0.48, 'rust')
-    B('weld', (5.7, 5.85), (-0.66, 0.62), 0.52, 'steel')
-    B('striker', (8.4, 8.9), (-0.05, 0.35), 0.16, 'steel')
-    B('knob', (7.0, 7.45), (0.58, 0.9), 0.14, 'parts')
-    B('rs_l', (7.85, 8.15), (0.58, 0.82), (-0.4, -0.12), 'parts')
-    B('rs_r', (7.85, 8.15), (0.58, 0.82), (0.12, 0.4), 'parts')
-    # --- bent-wire trigger guard, nail trigger
-    B('tg_front', (4.5, 4.7), (-1.95, -0.62), 0.1, 'steel')
-    B('tg_bottom', (4.5, 6.4), (-2.12, -1.92), 0.1, 'steel')
-    B('trigger', (5.3, 5.52), (-1.55, -0.62), 0.09, 'steel', rot=(-22.5, (5.4, -0.62)))
-    # --- wooden grip block wrapped in tape
-    for i in range(3):
-        sh = 0.22 * i
-        v0 = -0.62 - 0.9 * i
-        B('grip_%d' % i, (6.4 + sh, 8.3 + sh), (v0 - 0.9, v0), 0.52, 'wood_870')
-    for j, v in enumerate((-1.2, -2.3)):
-        B('tape%d' % j, (6.38 + 0.22 * (j + 0.5), 8.35 + 0.22 * (j + 0.5)), (v - 0.18, v + 0.04), 0.55, 'tape')
-    B('grip_cap', (6.8, 8.85), (-3.55, -3.32), 0.48, 'rust')
+    sl = 1.15
+    # --- pipe barrel with muzzle collar, two hose clamps, bar frame underneath
+    C('barrel', (0.0, 6.6), 0.2, 0.38, 'pipe')
+    B('muzzle_ring', (0.0, 0.32), (-0.26, 0.66), 0.45, 'parts')
+    for i, u in enumerate((1.1, 4.1)):
+        B('clamp%d' % i, (u, u + 0.4), (-0.38, 0.76), 0.5, 'parts')
+        B('clamp%d_screw' % i, (u + 0.08, u + 0.32), (0.76, 0.98), 0.17, 'steel')
+    B('frame', (0.5, 6.6), (-0.68, -0.34), 0.34, 'rust')
+    B('fs_post', (0.4, 0.7), (0.58, sl), 0.07, 'steel')
+    # --- welded box receiver with a side weld seam, bolt handle, rear sight, striker cap
+    B('receiver', (6.2, 8.9), (-0.72, 0.72), 0.52, 'rust')
+    B('weld', (6.1, 6.3), (-0.76, 0.76), 0.56, 'steel')
+    B('bolt_stem', (7.5, 7.8), (0.72, 0.98), 0.1, 'steel')
+    B('bolt_knob', (7.25, 8.05), (0.98, 1.2), 0.24, 'steel')
+    B('rs_l', (8.25, 8.6), (0.72, sl), (-0.38, -0.12), 'parts')
+    B('rs_r', (8.25, 8.6), (0.72, sl), (0.12, 0.38), 'parts')
+    B('striker', (8.9, 9.5), (-0.1, 0.4), 0.2, 'steel')
+    B('striker_cap', (9.5, 9.75), (-0.22, 0.52), 0.32, 'parts')
+    # --- bent-rod trigger guard, nail trigger
+    B('tg_front', (5.6, 5.85), (-2.1, -0.62), 0.12, 'steel')
+    B('tg_bottom', (5.6, 7.5), (-2.35, -2.08), 0.12, 'steel')
+    B('tg_rear', (7.25, 7.5), (-2.3, -0.62), 0.12, 'steel')
+    B('trigger', (6.5, 6.72), (-1.85, -0.7), 0.09, 'steel', rot=(-22.5, (6.6, -0.7)))
+    # --- wooden grip block under and behind the receiver, wrapped in tape
+    for i in range(4):
+        sh = 0.12 * i
+        v0 = -0.55 - 0.85 * i
+        B('grip_%d' % i, (7.45 + sh, 9.6 + sh), (v0 - 0.85, v0), 0.56, 'wood_870')
+    for j, i in enumerate((1, 2)):
+        sh = 0.12 * i
+        v0 = -0.55 - 0.85 * i
+        B('tape%d' % j, (7.45 + sh, 9.6 + sh), (v0 - 0.62, v0 - 0.28), 0.6, 'tape')
+    B('grip_cap', (7.85, 10.1), (-4.12, -3.95), 0.6, 'rust')
 
     D = g.dec
-    D(oval('F', 0, 0.15, 0.22, 0.22, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
-    D(stripes('RL', 'a', 0.5, 0.12, a=(5.9, 8.3), b=(-0.5, 0.5), els=['receiver'], mul=0.8))
-    D(stripes('TRL', 'b', 0.14, 0.05, els=['weld'], mul=0.7))
-    D(hatch('RL', els=['grip_*'], period=0.4, mul=0.85))
-    D(stripes('RL', 'b', 0.12, 0.04, els=['tape*'], mul=0.8))
-    for (a, b) in ((6.4, -0.3), (7.9, -0.3), (2.0, -0.46), (5.0, -0.46)):
+    D(oval('F', 0, 0.2, 0.22, 0.22, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
+    D(text('L', 'AXON', 6.55, 0.38, els=['receiver'], col=(196, 184, 160), snap=True))
+    D(text('R', 'AXON', 8.55, 0.38, els=['receiver'], col=(196, 184, 160), snap=True))
+    D(stripes('TBRL', 'b', 0.15, 0.06, els=['weld'], mul=0.7))
+    D(hatch('RL', els=['grip_*'], period=0.4, mul=0.82, b=(-3.8, -0.8)))
+    D(stripes('RL', 'b', 0.14, 0.05, els=['tape*'], mul=0.8))
+    D(paint('K', (-0.04, 0.04), (0.9, 1.08), (236, 236, 232), els=['fs_post']))
+    for (a, b) in ((6.6, -0.4), (8.5, -0.4), (2.5, -0.5), (5.2, -0.5)):
         D(rivet('RL', a, b, 0.1, els=['receiver', 'frame']))
 
-    g.sight = dict(rear=(8.0, 0.82), front=(0.45, 0.82))
-    g.ads = dict(cam=(13.0, 0.82), front=(0.45, 0.82), roll=2.5, sxyz=(1.0, 1.0, 1.1))
-    g.grip = (7.2, -2.1)
+    g.sight = dict(rear=(8.4, sl), front=(0.5, sl))
+    g.ads = dict(cam=(14.0, sl), front=(0.5, sl), roll=2.5, sxyz=(1.0, 1.0, 1.1))
+    g.grip = (8.7, -2.0)
     return g
 
 
 def build_rewolwer():
-    L = 11.0
+    """Six-shot revolver: heavy underlug barrel with vent rib, fluted cylinder, wooden plowhandle grip."""
     k = 3.8125 / 7.8
-    g = Gun('rewolwer', dict(s=1, k=k, kw=k * 1.25, Xm=4.5625, Yb=5.4, Zc=4.5))
+    g = Gun('rewolwer', dict(s=1, k=k, kw=k * 1.25, Xm=4.5625 - (9.4 - 6.0) * k, Yb=5.4, Zc=4.5))
     g.density = 9.0
     B, C = g.b, g.cyl
-    sl = 1.15
-    # --- barrel with top rib, ejector rod shroud, ramp front sight
-    C('barrel', (0.0, 5.3), 0.25, 0.36, 'blued')
-    B('rib', (0.05, 5.3), (0.55, 0.78), 0.2, 'blued')
-    B('shroud', (0.7, 5.3), (-0.55, -0.1), 0.24, 'blued')
-    B('ejector', (0.5, 0.7), (-0.5, -0.2), 0.12, 'parts')
-    B('fs_post', (0.3, 0.75), (0.78, sl), 0.07, 'blued')
-    # --- frame window, six-shot cylinder, top strap, hammer
-    B('frame_front', (5.3, 5.6), (-0.7, 0.9), 0.42, 'blued')
-    C('cyl', (5.6, 8.0), 0.12, 0.95, 'blued', k=0.75)
-    B('cyl_pin', (5.4, 5.6), (-0.05, 0.25), 0.1, 'parts')
-    B('top_strap', (5.6, 8.6), (0.9, 1.05), 0.34, 'blued')
-    B('frame_rear', (8.0, 8.8), (-0.75, 1.05), 0.44, 'blued')
-    B('frame_low', (5.6, 8.0), (-0.9, -0.75), 0.38, 'blued')
-    B('rs_l', (8.25, 8.6), (1.05, sl), (-0.34, -0.1), 'blued')
-    B('rs_r', (8.25, 8.6), (1.05, sl), (0.1, 0.34), 'blued')
-    B('hammer', (8.8, 9.15), (0.2, 1.05), 0.16, 'steel')
-    B('hammer_spur', (9.0, 9.55), (0.95, 1.3), 0.15, 'steel')
-    B('latch', (8.1, 8.6), (0.15, 0.4), (0.44, 0.52), 'parts')
-    # --- round trigger guard, trigger
-    B('tg_front', (6.4, 6.65), (-1.95, -0.9), 0.17, 'blued')
-    B('tg_bottom', (6.55, 8.4), (-2.2, -1.95), 0.17, 'blued')
-    B('tg_rear', (8.2, 8.45), (-2.0, -0.9), 0.17, 'blued')
-    B('trigger', (7.25, 7.5), (-1.7, -0.9), 0.1, 'parts', rot=(-22.5, (7.37, -0.9)))
-    # --- walnut grip, curved back
+    sl = 1.8
+    # --- barrel: crown, vent rib, ramp front sight, underlug with ejector rod
+    C('barrel', (0.0, 4.8), 0.6, 0.42, 'steel')
+    B('crown', (0.0, 0.3), (0.15, 1.05), 0.46, 'steel')
+    B('rib', (0.3, 4.8), (1.0, 1.22), 0.2, 'blued')
+    B('fs_base', (0.5, 1.5), (1.2, 1.5), 0.2, 'blued')
+    B('fs_post', (0.65, 0.95), (1.5, sl), 0.07, 'blued')
+    B('lug', (0.5, 5.0), (-0.62, 0.22), 0.4, 'steel')
+    B('rod', (0.5, 4.4), (-0.86, -0.55), 0.14, 'steel')
+    B('rod_tip', (0.3, 0.7), (-0.92, -0.45), 0.22, 'parts')
+    # --- frame: front block, top strap, cylinder window, rear block with sight, hammer, latch
+    B('frame_front', (4.8, 5.5), (-1.0, 1.4), 0.52, 'blued')
+    C('cyl', (5.5, 7.7), 0.2, 1.0, 'parts', k=0.8)
+    B('frame_low', (5.5, 7.7), (-1.12, -0.7), 0.5, 'blued')
+    B('top_strap', (5.5, 8.8), (1.2, 1.42), 0.46, 'blued')
+    B('frame_rear', (7.7, 9.0), (-1.12, 1.42), 0.52, 'blued')
+    B('rs_base', (8.1, 8.8), (1.42, 1.58), 0.44, 'blued')
+    B('rs_l', (8.45, 8.8), (1.58, sl), (-0.44, -0.12), 'blued')
+    B('rs_r', (8.45, 8.8), (1.58, sl), (0.12, 0.44), 'blued')
+    B('hammer', (9.0, 9.4), (0.3, 1.6), 0.17, 'steel')
+    B('hammer_spur', (9.15, 9.95), (1.2, 1.62), 0.2, 'steel')
+    B('latch', (7.5, 8.4), (0.0, 0.4), (0.52, 0.62), 'parts')
+    # --- trigger guard, trigger
+    B('tg_front', (5.7, 6.0), (-2.4, -1.05), 0.18, 'blued')
+    B('tg_bottom', (5.7, 8.4), (-2.65, -2.35), 0.18, 'blued')
+    B('tg_rear', (8.0, 8.4), (-2.5, -1.05), 0.18, 'blued')
+    B('trigger', (6.9, 7.15), (-1.85, -1.05), 0.1, 'parts', rot=(-22.5, (7.0, -1.05)))
+    # --- plowhandle grip: steel core with front strap, walnut panels
     for i in range(4):
-        sh = 0.32 * i
-        v0 = -0.75 - 0.9 * i
-        B('gframe_%d' % i, (8.3 + sh, 8.7 + sh), (v0 - 0.9, v0), 0.4, 'blued')
-        B('grip_%d' % i, (8.7 + sh, 9.9 + sh), (v0 - 0.9, v0), 0.58, 'wood_870')
-    B('butt', (9.2, 11.0), (-4.55, -4.35), 0.5, 'blued')
+        sh = 0.14 * i
+        v0 = -1.05 - 0.95 * i
+        B('core_%d' % i, (8.0 + sh, 9.75 + sh), (v0 - 0.95, v0), 0.5, 'blued')
+        B('grip_%d' % i, (8.4 + sh, 9.55 + sh), (v0 - 0.95, v0), 0.64, 'wood_870')
+    B('butt', (8.7, 10.3), (-5.12, -4.84), 0.6, 'blued')
 
     D = g.dec
-    D(oval('F', 0, 0.25, 0.2, 0.2, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
-    D(stripes('RL', 'a', 0.6, 0.22, a=(5.8, 7.8), b=(-0.6, 0.85), els=['cyl_a'], mul=0.55))   # flutes
-    D(stripes('TB', 'a', 0.6, 0.22, a=(5.8, 7.8), els=['cyl_b'], mul=0.55))
-    D(text('L', 'AXON', 1.4, -0.05, els=['barrel_a'], col=(170, 172, 176)))
-    D(paint('K', (-0.05, 0.05), (0.95, 1.08), (236, 236, 232), els=['fs_post']))
-    D(hatch('RL', els=['grip_*'], period=0.3, mul=0.78, b=(-4.2, -1.0)))
+    D(oval('F', 0, 0.6, 0.2, 0.2, els=['crown'], col=(6, 6, 7)))
+    D(stripes('RL', 'a', 0.55, 0.22, a=(5.7, 7.6), b=(-0.6, 1.1), els=['cyl_a'], mul=0.5))
+    D(stripes('TB', 'a', 0.55, 0.22, a=(5.7, 7.6), els=['cyl_b'], mul=0.5))
+    D(text('L', 'AXON', 1.2, 0.1, els=['lug'], col=(168, 170, 176), snap=True))
+    D(text('R', 'AXON', 3.2, 0.1, els=['lug'], col=(168, 170, 176), snap=True))
+    D(paint('K', (-0.05, 0.05), (1.6, 1.78), (236, 236, 232), els=['fs_post']))
+    D(paint('K', (-0.34, -0.22), (1.62, 1.78), (236, 236, 232), els=['rs_l']))
+    D(paint('K', (0.22, 0.34), (1.62, 1.78), (236, 236, 232), els=['rs_r']))
+    D(hatch('RL', els=['grip_*'], period=0.3, mul=0.78, b=(-4.8, -1.2)))
+    D(stripes('K', 'b', 0.3, 0.12, els=['grip_*'], mul=0.75))
+    D(rivet('RL', 9.15, -2.3, 0.13, els=['grip_*'], cols=((196, 170, 110), (44, 24, 12))))
+    D(stripes('RL', 'a', 0.25, 0.1, els=['butt'], mul=0.7))
     D(stripes('K', 'b', 0.14, 0.06, els=['hammer_spur'], mul=0.6))
-    D(rivet('RL', 9.6, -2.4, 0.13, els=['grip_*'], cols=((160, 150, 120), (40, 22, 12))))
-    for (a, b) in ((5.45, 0.2), (8.4, -0.4)):
-        D(rivet('RL', a, b, 0.09, els=['frame_front', 'frame_rear']))
 
-    g.sight = dict(rear=(8.4, sl), front=(0.5, sl))
-    g.ads = dict(cam=(14.5, sl), front=(0.5, sl), roll=2.5, sxyz=(1.0, 1.0, 1.1))
-    g.grip = (9.4, -2.6)
+    g.sight = dict(rear=(8.6, sl), front=(0.8, sl))
+    g.ads = dict(cam=(15.0, sl), front=(0.8, sl), roll=2.5, sxyz=(1.0, 1.0, 1.1))
+    g.grip = (9.5, -2.8)
     return g
 
 
 def build_ruroowka():
-    L = 40.0
+    """Pipe shotgun: pipe barrel in a rusty breech sleeve, plank stock lashed with clamps, rope and tape."""
     k = 22.25 / 46.2
-    g = Gun('ruroowka', dict(s=-1, k=k, kw=k * 1.25, Xm=16.5, Yb=10.75, Zc=4.25))
+    g = Gun('ruroowka', dict(s=-1, k=k, kw=k * 1.25, Xm=16.5 + k * (29.0 - 35.0), Yb=10.75, Zc=4.25))
     B, C = g.b, g.cyl
-    # --- plain pipe barrel slid into a fatter breech pipe, end cap as the breech plug
-    C('barrel', (0.0, 21.0), 0.0, 0.78, 'pipe')
-    C('breech', (19.5, 27.5), 0.0, 1.08, 'rust')
-    B('coupler', (19.2, 19.6), (-1.1, 1.1), 1.1, 'parts')
-    B('bead', (0.4, 0.8), (0.75, 1.05), 0.15, 'brass')
-    # --- plank fore-end and hose clamps
-    B('forend', (9.0, 19.0), (-2.1, -0.75), 0.9, 'plank')
-    for i, u in enumerate((10.0, 17.0, 23.0)):
-        B('clamp%d' % i, (u, u + 0.5), (-2.2, 1.2), 1.18, 'parts')
-        B('clamp%d_screw' % i, (u + 0.08, u + 0.42), (-0.4, 0.3), (1.18, 1.5), 'parts')
-    # --- plank receiver block, nail striker, bent trigger in a strap guard
-    B('block', (21.0, 30.5), (-2.4, -1.05), 1.0, 'plank')
-    B('striker_lever', (27.5, 28.0), (-0.6, 1.4), 0.25, 'steel', rot=(22.5, (27.75, -0.6)))
-    B('pin', (28.5, 29.0), (-0.25, 0.25), 1.1, 'steel')
-    B('tg_front', (25.0, 25.35), (-3.6, -2.4), 0.28, 'rust')
-    B('tg_bottom', (25.0, 28.4), (-3.9, -3.6), 0.3, 'rust')
-    B('trigger', (26.4, 26.75), (-3.3, -2.4), 0.13, 'steel', rot=(-22.5, (26.5, -2.4)))
-    # --- grip and butt from planks, rope-wrapped wrist
-    for i in range(3):
-        sh = 0.55 * i
-        v0 = -2.4 - 0.8 * i
-        B('grip_%d' % i, (28.6 + sh, 30.9 + sh), (v0 - 0.8, v0), 0.78, 'plank')
-    B('wrist', (30.5, 33.5), (-2.4, 0.2), 0.8, 'plank')
-    B('rope', (31.0, 32.6), (-2.5, 0.3), 0.86, 'tape')
-    g.stair('stock', (33.5, 39.4), (0.2, -0.2), (-2.4, -3.8), 6, 0.86, 'plank')
-    B('butt_plate', (39.4, 40.0), (-3.9, 0.0), 0.9, 'rubber')
+    sl = 1.55
+    # --- barrel pipe with collars, bead, breech sleeve with coupler and end cap
+    C('barrel', (0.0, 21.0), 0.0, 0.75, 'pipe')
+    for i, u in enumerate((3.6, 10.6)):
+        B('collar%d' % i, (u, u + 0.5), (-0.84, 0.84), 0.84, 'parts')
+    B('fs_post', (0.4, 0.8), (0.6, sl), 0.1, 'steel')
+    C('breech', (18.5, 27.5), 0.0, 1.1, 'rust')
+    B('coupler', (18.3, 18.95), (-1.2, 1.2), 1.2, 'parts')
+    C('cap', (27.5, 28.6), 0.0, 1.2, 'steel')
+    # --- cocking nail on the right side of the sleeve, rear sight bolts
+    B('knob_stem', (26.0, 26.4), (-0.1, 0.1), (1.1, 1.5), 'steel')
+    B('knob', (25.8, 26.6), (-0.32, 0.32), (1.5, 1.82), 'steel')
+    B('rs_l', (24.6, 25.1), (1.0, sl), (-0.5, -0.14), 'steel')
+    B('rs_r', (24.6, 25.1), (1.0, sl), (0.14, 0.5), 'steel')
+    # --- plank fore-end and breech block, hose clamps and straps
+    B('forend', (8.0, 18.5), (-2.3, -0.6), 0.95, 'plank')
+    B('block', (18.5, 30.0), (-2.7, -0.9), 1.05, 'plank')
+    for i, u in enumerate((8.8, 15.4)):
+        B('clamp%d' % i, (u, u + 0.6), (-2.4, 0.96), 1.02, 'parts')
+        B('clamp%d_screw' % i, (u + 0.1, u + 0.5), (-0.4, 0.4), (1.02, 1.3), 'steel')
+    for i, u in enumerate((20.2, 24.6)):
+        B('strap%d' % i, (u, u + 0.55), (-2.8, 1.2), 1.17, 'parts')
+    # --- bent-strap trigger guard and trigger
+    B('tg_front', (22.8, 23.15), (-4.0, -2.6), 0.28, 'rust')
+    B('tg_bottom', (22.8, 26.2), (-4.3, -4.0), 0.3, 'rust')
+    B('tg_rear', (25.9, 26.2), (-4.15, -2.6), 0.28, 'rust')
+    B('trigger', (24.0, 24.35), (-3.6, -2.6), 0.13, 'steel', rot=(-22.5, (24.1, -2.6)))
+    # --- plank pistol grip, wrist wrapped in rope, plank butt
+    for i in range(4):
+        sh = 0.25 * i
+        v0 = -2.6 - 0.95 * i
+        B('grip_%d' % i, (26.5 + sh, 29.8 + sh), (v0 - 0.95, v0), 0.82, 'plank')
+    B('wrist', (28.5, 34.5), (-2.7, 0.4), 0.82, 'plank')
+    B('rope', (30.6, 32.4), (-2.8, 0.5), 0.88, 'tape')
+    B('stock_body', (34.5, 43.4), (-2.7, 0.4), 0.82, 'plank')
+    toe = g.slope('stock', (36.0, -2.55), 22.5, 0.9, 43.4, -2.7, 0.82, 'plank')
+    B('butt_plate', (43.4, 44.0), (toe - 0.05, 0.45), 0.88, 'rubber')
 
     D = g.dec
-    D(oval('F', 0, 0, 0.55, 0.55, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
-    D(stripes('TBRL', 'a', 3.3, 0.18, a=(1.0, 18.5), els=['barrel_*'], mul=0.8))
+    D(oval('F', 0, 0, 0.5, 0.5, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
+    D(stripes('TBRL', 'a', 3.5, 0.14, a=(1.0, 17.5), els=['barrel_*'], mul=0.8))
+    D(stripes('RL', 'a', 0.35, 0.12, els=['breech_*'], mul=0.82, a=(19.0, 27.2)))
     D(stripes('RL', 'b', 0.2, 0.08, els=['rope'], mul=0.7))
-    D(stripes('RL', 'a', 0.25, 0.1, els=['clamp*'], mul=0.75))
-    D(rivet('RL', 22.5, -1.7, 0.16, els=['block'], cols=((130, 132, 136), (30, 22, 14))))
-    D(text('R', 'AXON', 34.4, -1.5, els=['stock_*'], col=(90, 62, 34)))
+    D(stripes('RL', 'a', 0.25, 0.1, els=['clamp*', 'strap*'], mul=0.75))
+    D(stripes('RL', 'a', 1.1, 0.09, a=(9.0, 18.0), els=['forend'], mul=0.82))
+    D(hatch('RL', els=['grip_*'], period=0.4, mul=0.85, b=(-6.0, -2.8)))
+    D(text('L', 'AXON', 36.6, -0.5, els=['stock_body'], col=(78, 52, 28), snap=True))
+    D(text('R', 'AXON', 41.6, -0.5, els=['stock_body'], col=(78, 52, 28), snap=True))
+    D(paint('K', (-0.05, 0.05), (1.3, sl), (236, 236, 232), els=['fs_post']))
+    D(stripes('F', 'b', 0.3, 0.12, els=['butt_plate'], mul=0.6))
+    for (a, b) in ((22.0, -1.8), (28.0, -1.8), (31.5, -1.2), (12.5, -1.4)):
+        D(rivet('RL', a, b, 0.14, els=['block', 'wrist', 'forend'], cols=((130, 132, 136), (30, 22, 14))))
 
-    g.sight = dict(rear=(27.3, 1.1), front=(0.6, 1.05))
-    g.ads = dict(cam=(50.0, 2.0), front=(0.6, 1.05))
-    g.grip = (29.5, -3.2)
+    g.sight = dict(rear=(24.9, sl), front=(0.6, sl))
+    g.ads = dict(cam=(52.0, sl), front=(0.6, sl))
+    g.grip = (29.0, -3.5)
     return g
 
 
 def build_dubeltowka():
-    L = 44.0
+    """Side-by-side double: twin barrels with rib, engraved steel action with top lever, walnut stock."""
     k = 22.25 / 46.2
-    g = Gun('dubeltowka', dict(s=-1, k=k, kw=k * 1.25, Xm=16.5, Yb=10.75, Zc=4.25))
+    g = Gun('dubeltowka', dict(s=-1, k=k, kw=k * 1.25, Xm=16.5 + k * (33.8 - 35.0), Yb=10.75, Zc=4.25))
     B, C = g.b, g.cyl
-    # --- side-by-side barrels with the top rib and bead
-    C('barrel_l', (0.0, 25.0), 0.0, 0.6, 'blued', dw=-0.6)
-    C('barrel_r', (0.0, 25.0), 0.0, 0.6, 'blued', dw=0.6)
-    B('rib', (0.2, 24.6), (0.4, 0.72), 0.22, 'blued')
-    B('rib_low', (6.0, 24.6), (-0.72, -0.4), 0.22, 'blued')
-    B('bead', (0.4, 0.75), (0.72, 0.98), 0.12, 'brass')
-    # --- splinter fore-end, action with engraved side plates, top lever, hinge
-    B('forend', (12.0, 22.0), (-1.45, -0.45), 0.98, 'wood_870')
-    B('forend_tip', (11.6, 12.0), (-1.3, -0.55), 0.85, 'wood_870')
-    B('hinge', (24.6, 25.4), (-1.45, 0.5), 1.18, 'stainless')
-    B('action', (25.4, 30.0), (-1.6, 0.62), 1.25, 'stainless')
-    B('top_lever', (28.6, 30.6), (0.62, 0.86), 0.3, 'stainless')
-    B('safety', (30.6, 31.3), (0.62, 0.8), 0.16, 'stainless')
-    for i, sv in enumerate((-1, 1)):
-        B('hammer%d' % i, (29.4, 30.0), (0.3, 1.1), (sv * 1.25 - 0.14 if sv > 0 else -1.39, sv * 1.25 + 0.14 if sv > 0 else -1.11), 'steel')
-    # --- double triggers in a long guard
-    B('tg_front', (26.6, 26.9), (-2.7, -1.6), 0.22, 'stainless')
-    B('tg_bottom', (26.7, 30.6), (-2.95, -2.7), 0.24, 'stainless')
-    B('tg_rear', (30.3, 30.6), (-2.8, -1.6), 0.22, 'stainless')
-    B('trigger_f', (27.7, 27.95), (-2.35, -1.6), 0.11, 'parts', rot=(-22.5, (27.8, -1.6)))
-    B('trigger_r', (28.9, 29.15), (-2.35, -1.6), 0.11, 'parts', rot=(-22.5, (29.0, -1.6)))
-    # --- straight English stock
-    B('wrist', (30.0, 33.5), (-1.9, 0.62), 0.78, 'wood_870')
-    g.stair('stock', (33.5, 43.4), (0.62, 0.1), (-1.9, -4.2), 10, 0.86, 'wood_870')
-    B('butt_plate', (43.4, 44.0), (-4.3, 0.2), 0.9, 'black')
+    sl = 1.1
+    # --- twin barrels, top and bottom rib, bead
+    C('barrel_l', (0.0, 26.0), 0.0, 0.7, 'blued', dw=-0.7)
+    C('barrel_r', (0.0, 26.0), 0.0, 0.7, 'blued', dw=0.7)
+    B('rib', (0.3, 25.5), (0.4, 0.8), 0.2, 'blued')
+    B('rib_low', (6.0, 25.5), (-0.8, -0.4), 0.2, 'blued')
+    B('fs_post', (0.4, 0.8), (0.8, sl), 0.1, 'brass')
+    # --- splinter fore-end with hanger, action with top lever and tang
+    B('forend', (11.5, 22.0), (-1.7, -0.5), 1.3, 'wood_870')
+    B('forend_tip', (11.0, 11.5), (-1.55, -0.6), 1.2, 'wood_870')
+    B('hanger', (22.0, 24.6), (-1.25, -0.5), 0.72, 'steel')
+    B('action', (24.6, 31.8), (-1.7, 0.9), 1.45, 'stainless')
+    B('plate_r', (25.0, 31.4), (-1.5, 0.7), (1.45, 1.52), 'steel')
+    B('plate_l', (25.0, 31.4), (-1.5, 0.7), (-1.52, -1.45), 'steel')
+    B('lever', (28.8, 32.2), (0.9, sl), 0.26, 'stainless')
+    B('rs_notch', (29.4, 29.9), (0.9, sl), (-0.5, -0.14), 'stainless')
+    B('rs_notch_r', (29.4, 29.9), (0.9, sl), (0.14, 0.5), 'stainless')
+    B('tang', (31.8, 36.2), (0.65, 1.02), 0.34, 'stainless')
+    B('safety', (33.0, 33.8), (1.02, 1.12), 0.12, 'parts')
+    # --- trigger plate, long guard, two triggers
+    B('tplate', (27.0, 32.0), (-2.0, -1.65), 0.62, 'stainless')
+    B('tg_front', (27.0, 27.35), (-3.25, -1.95), 0.25, 'stainless')
+    B('tg_bottom', (27.0, 32.0), (-3.5, -3.2), 0.27, 'stainless')
+    B('tg_rear', (31.7, 32.0), (-3.4, -1.95), 0.25, 'stainless')
+    B('trigger_f', (28.6, 28.85), (-2.95, -1.95), 0.11, 'parts', rot=(-22.5, (28.7, -1.95)))
+    B('trigger_r', (30.0, 30.25), (-2.95, -1.95), 0.11, 'parts', rot=(-22.5, (30.1, -1.95)))
+    # --- walnut wrist and stock with comb drop, rubber pad
+    B('wrist', (31.8, 36.5), (-2.3, 0.9), 0.9, 'wood_870')
+    B('stock_body', (36.5, 47.6), (-2.3, 0.9), 0.9, 'wood_870')
+    toe = g.slope('stock', (38.5, -2.15), 22.5, 1.0, 47.6, -2.3, 0.9, 'wood_870')
+    B('spacer', (47.6, 47.75), (toe - 0.05, 0.96), 0.92, 'spacer')
+    B('butt_plate', (47.75, 48.4), (toe - 0.05, 0.96), 0.94, 'rubber')
 
     D = g.dec
     D(oval('F', 0, 0, 0.42, 0.42, els=['barrel_l_a', 'barrel_l_b'], col=(6, 6, 7)))
     D(oval('F', 0, 0, 0.42, 0.42, els=['barrel_r_a', 'barrel_r_b'], col=(6, 6, 7)))
     D(stripes('T', 'a', 0.3, 0.1, els=['rib'], mul=0.7))
-    D(engraving('RL', ['action'], (25.6, 29.8), (-1.4, 0.4)))
-    D(hatch('RL', els=['wrist'], period=0.25, mul=0.8))
+    D(engraving('R', ['plate_r'], (25.1, 31.3), (-1.4, 0.6), col_mul=0.6))
+    D(text('L', 'AXON', 26.4, -0.2, els=['plate_l'], col=(176, 178, 184), snap=True))
+    D(hatch('RL', els=['wrist'], period=0.25, mul=0.8, b=(-2.0, 0.5)))
     D(hatch('B', els=['forend'], period=0.3, mul=0.8))
-    D(text('L', 'AXON', 36.0, -1.2, els=['stock_*'], col=(52, 26, 12)))
-    D(rivet('RL', 25.0, -0.5, 0.25, els=['hinge']))
+    D(text('L', 'AXON', 39.4, -0.2, els=['stock_body'], col=(52, 26, 12), snap=True))
+    D(text('R', 'AXON', 44.6, -0.2, els=['stock_body'], col=(52, 26, 12), snap=True))
+    D(paint('K', (-0.05, 0.05), (0.8, sl), (236, 236, 232), els=['fs_post']))
+    D(stripes('RLKB', 'a', 0.3, 0.12, els=['butt_plate'], mul=0.55))
+    D(rivet('RL', 28.5, 0.5, 0.2, els=['action']))
 
-    g.sight = dict(rear=(28.0, 0.98), front=(0.55, 0.98))
-    g.ads = dict(cam=(54.0, 1.8), front=(0.55, 0.98))
-    g.grip = (31.0, -1.8)
+    g.sight = dict(rear=(29.65, sl), front=(0.6, sl))
+    g.ads = dict(cam=(58.0, sl), front=(0.6, sl))
+    g.grip = (33.8, -1.0)
     return g
 
 
 def build_muszkiet():
-    L = 56.0
+    """Flintlock musket: full-length walnut stock with barrel in its channel, brass bands, ramrod, lock."""
     k = 21.8 / 52.9
-    g = Gun('muszkiet', dict(ax='z', s=1, k=k, kw=k * 1.25, Zm=-3.0, Yb=6.52, Xc=8.0))
+    g = Gun('muszkiet', dict(ax='z', s=1, k=k, kw=k * 1.25, Zm=-3.0 - k * (43.5 - 34.0), Yb=6.52, Xc=8.0))
     B, C = g.b, g.cyl
-    sl = 0.95
-    # --- long smooth barrel, brass bands, ramrod
-    C('barrel', (0.0, 37.0), 0.0, 0.42, 'blued')
-    B('fs_post', (0.8, 1.2), (0.42, sl), 0.07, 'brass')
-    B('rod', (1.5, 34.0), (-0.95, -0.75), 0.09, 'steel')
-    B('rod_tip', (1.2, 1.5), (-1.0, -0.7), 0.13, 'brass')
-    for i, u in enumerate((4.0, 13.0, 22.0)):
-        B('band%d' % i, (u, u + 0.6), (-1.15, 0.5), 0.6, 'brass')
-    # --- full-length stock
-    B('forend', (3.0, 37.0), (-1.1, 0.1), 0.55, 'wood_ak')
-    # --- flintlock: lock plate, cock with flint, frizzen and pan on the right side
-    B('lock_plate', (33.5, 39.5), (-0.7, 0.35), (0.55, 0.66), 'parts')
-    B('cock', (37.5, 38.2), (0.0, 1.3), (0.6, 0.85), 'steel', rot=(22.5, (37.85, 0.0)))
-    B('flint', (37.0, 37.5), (1.0, 1.35), (0.6, 0.85), 'tape')
-    B('pan', (35.4, 36.4), (0.1, 0.35), (0.55, 0.95), 'steel')
-    B('frizzen', (35.6, 36.0), (0.35, 1.25), (0.62, 0.92), 'steel')
-    B('rs_notch', (36.8, 37.2), (0.42, sl), 0.25, 'blued')
-    B('tang', (37.0, 41.0), (0.1, 0.35), 0.28, 'blued')
-    # --- brass trigger guard, trigger
-    B('tg_front', (39.0, 39.3), (-2.0, -1.1), 0.18, 'brass')
-    B('tg_bottom', (39.1, 42.2), (-2.25, -2.0), 0.2, 'brass')
-    B('tg_rear', (41.9, 42.2), (-2.1, -1.1), 0.18, 'brass')
-    B('trigger', (40.2, 40.45), (-1.8, -1.1), 0.1, 'parts', rot=(-22.5, (40.3, -1.1)))
-    B('stock_mid', (37.0, 42.5), (-1.1, 0.1), 0.6, 'wood_ak')
-    # --- wrist and butt with a deep drop, brass butt plate
-    B('wrist', (42.5, 45.0), (-2.0, 0.1), 0.58, 'wood_ak')
-    g.stair('stock', (45.0, 55.4), (0.1, -0.5), (-2.2, -4.9), 10, 0.68, 'wood_ak')
-    B('buttplate', (55.4, 56.0), (-5.0, -0.4), 0.72, 'brass')
+    sl = 1.4
+    # --- long barrel with breech block, front sight, rear notch
+    C('barrel', (0.0, 38.0), 0.52, 0.48, 'blued')
+    B('breech', (35.5, 38.6), (0.08, 1.0), 0.55, 'blued')
+    B('fs_post', (0.8, 1.2), (0.92, sl), 0.07, 'brass')
+    B('rs_base', (36.0, 37.2), (0.95, 1.1), 0.3, 'blued')
+    B('rs_l', (36.8, 37.2), (1.1, sl), (-0.3, -0.1), 'blued')
+    B('rs_r', (36.8, 37.2), (1.1, sl), (0.1, 0.3), 'blued')
+    # --- stock channel: full-length forend with wood lips around the barrel
+    B('forend', (2.4, 36.5), (-1.1, 0.15), 0.62, 'wood_ak')
+    B('lip_l', (3.0, 35.5), (0.1, 0.6), (-0.62, -0.44), 'wood_ak')
+    B('lip_r', (3.0, 35.5), (0.1, 0.6), (0.44, 0.62), 'wood_ak')
+    # --- brass bands with ramrod pipes under the stock, ramrod and tip
+    for i, u in enumerate((6.0, 15.0, 24.0, 32.5)):
+        B('band%d' % i, (u, u + 0.6), (-1.18, 0.98), 0.66, 'brass')
+        B('pipe%d' % i, (u, u + 0.6), (-1.55, -1.05), 0.3, 'brass')
+    B('rod', (2.0, 33.2), (-1.4, -1.12), 0.11, 'steel')
+    B('rod_tip', (1.6, 2.1), (-1.45, -1.05), 0.17, 'brass')
+    # --- flintlock: lock plate with pan, frizzen, cock and flint on the right, side plate on the left
+    B('stock_mid', (36.5, 43.0), (-1.55, 0.15), 0.62, 'wood_ak')
+    B('lock_plate', (33.5, 40.5), (-0.75, 0.45), (0.62, 0.72), 'parts')
+    B('pan', (35.0, 36.4), (0.3, 0.7), (0.62, 1.04), 'steel')
+    B('frizzen', (35.0, 35.5), (0.7, 1.7), (0.6, 0.95), 'steel')
+    B('frizzen_top', (35.0, 37.4), (1.5, 1.7), (0.6, 0.95), 'steel')
+    B('flint', (37.4, 37.95), (1.0, 1.5), (0.62, 0.85), 'black')
+    B('jaw', (37.95, 38.75), (0.95, 1.5), (0.6, 0.88), 'steel')
+    B('cock', (38.75, 39.55), (0.2, 1.25), (0.6, 0.88), 'steel')
+    B('side_plate', (34.5, 38.5), (-0.6, 0.2), (-0.74, -0.62), 'brass')
+    B('tang', (38.0, 42.5), (0.15, 0.4), 0.26, 'blued')
+    # --- brass trigger guard and trigger
+    B('tg_front', (39.4, 39.7), (-2.25, -1.2), 0.18, 'brass')
+    B('tg_bottom', (39.4, 43.2), (-2.5, -2.22), 0.2, 'brass')
+    B('tg_rear', (42.9, 43.2), (-2.35, -1.2), 0.18, 'brass')
+    B('trigger', (40.5, 40.75), (-1.95, -1.2), 0.1, 'parts', rot=(-22.5, (40.6, -1.2)))
+    # --- wrist and drop butt, brass butt plate
+    B('wrist', (43.0, 46.0), (-2.25, 0.15), 0.6, 'wood_ak')
+    B('stock_body', (46.0, 55.0), (-2.25, 0.15), 0.7, 'wood_ak')
+    toe = g.slope('stock', (48.0, -2.1), 22.5, 0.9, 55.0, -2.25, 0.7, 'wood_ak')
+    B('buttplate', (55.0, 55.6), (toe - 0.05, 0.2), 0.74, 'brass')
 
     D = g.dec
-    D(oval('F', 0, 0, 0.26, 0.26, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
-    D(engraving('R', ['lock_plate'], (33.8, 39.2), (-0.6, 0.25)))
-    D(stripes('K', 'a', 99, 0.16, a=(-0.08, 0.08), els=['rs_notch'], mul=0.4))
-    D(text('L', 'AXON', 46.5, -1.6, els=['stock_*'], col=(90, 40, 18)))
-    for (a, b) in ((34.2, -0.2), (39.0, -0.2)):
-        D(rivet('L', a, b, 0.2, els=['stock_mid', 'forend'], cols=((210, 180, 100), (60, 40, 16))))
+    D(oval('F', 0, 0.5, 0.26, 0.26, els=['barrel_a', 'barrel_b'], col=(6, 6, 7)))
+    D(engraving('R', ['lock_plate'], (33.8, 40.2), (-0.65, 0.35)))
+    D(engraving('L', ['side_plate'], (34.7, 38.3), (-0.5, 0.1), col_mul=0.6))
+    D(stripes('K', 'a', 99, 0.16, a=(-0.08, 0.08), els=['rs_base'], mul=0.4))
+    D(stripes('RL', 'b', 0.3, 0.12, els=['rod'], mul=0.7))
+    D(stripes('RL', 'a', 0.25, 0.1, els=['band*'], mul=0.75))
+    D(text('L', 'AXON', 47.4, -0.45, els=['stock_body'], col=(44, 16, 6), snap=True))
+    D(text('R', 'AXON', 53.4, -0.45, els=['stock_body'], col=(44, 16, 6), snap=True))
+    D(stripes('K', 'b', 0.2, 0.1, els=['buttplate'], mul=0.6))
+    for (a, b) in ((34.2, -0.2), (39.6, -0.2)):
+        D(rivet('R', a, b, 0.14, els=['lock_plate'], cols=((220, 190, 110), (60, 40, 16))))
 
     g.sight = dict(rear=(37.0, sl), front=(1.0, sl))
-    g.ads = dict(cam=(41.5, sl), front=(1.0, sl), roll=2.5, scale=(2.0, 3.2, 2.78))
+    g.ads = dict(cam=(42.5, sl), front=(1.0, sl), roll=2.5, scale=(2.0, 3.2, 2.78))
     g.grip = (43.5, -1.2)
     return g
 

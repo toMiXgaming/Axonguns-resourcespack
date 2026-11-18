@@ -624,14 +624,73 @@ def d_rpg(g):
     ridges(g, 'pgrip_3', 'B', 36.4, 38.6, 4, 0.14, cross=(-0.6, 0.6), d=0.03, tag='pb')
 
 
+# ---------------------------------------------------------------- tanie bronie AxonGuns (gen.py: TANIE)
+def d_samopal(g):
+    muzzle_bore(g, 'muzzle_ring', 0.2, 0.0, 0.16)
+    ridges(g, 'receiver', 'T', 6.5, 8.5, 6, 0.14, cross=(-0.3, 0.3), d=0.035, tag='rt')
+    studs(g, 'receiver', [(6.9, -0.52), (8.4, -0.52)], 0.1, 0.04, 'RL', tag='rs')
+    ridges(g, 'striker_cap', 'K', -0.2, 0.5, 4, 0.1, cross=(-0.2, 0.2), d=0.03, tag='sk', along='b')
+    stepped_grip(g, 'grip', 4, per=2, d=0.035, width=0.1, tag='gr')
+    studs(g, 'frame', [(2.7, -0.51), (5.3, -0.51)], 0.1, 0.04, 'RL', tag='fr')
+
+
+def d_rewolwer(g):
+    ridges(g, 'rib', 'T', 0.6, 4.6, 9, 0.2, cross=(-0.12, 0.12), d=0.03, tag='rv')
+    muzzle_bore(g, 'crown', 0.6, 0.0, 0.17)
+    stepped_grip(g, 'grip', 4, per=3, d=0.035, width=0.1, tag='gr')
+    studs(g, 'frame_rear', [(8.3, 0.25)], 0.14, 0.04, 'RL', tag='sc')
+    studs(g, 'frame_front', [(5.15, 0.0)], 0.13, 0.04, 'RL', tag='sf')
+    studs(g, 'frame_low', [(6.6, -0.91)], 0.13, 0.04, 'RL', tag='fl')
+    ridges(g, 'hammer_spur', 'T', 9.3, 9.9, 4, 0.1, cross=(-0.15, 0.15), d=0.03, tag='hs')
+    ridges(g, 'rod_tip', 'RL', 0.35, 0.65, 2, 0.08, cross=(-0.85, -0.5), d=0.03, tag='rt')
+
+
+def d_ruroowka(g):
+    muzzle_bore(g, 'barrel_a', 0.0, 0.0, 0.45)
+    for u in (1.5, 6.5, 13.5, 16.5):
+        ring(g, 'brl', (u, u + 0.22), 0.0, 0.75, 'steel')
+    ridges(g, 'coupler', 'RL', 18.4, 18.85, 2, 0.12, cross=(-1.0, 1.0), d=0.03, tag='cp')
+    studs(g, 'cap_a', [(28.0, 0.0)], 0.2, 0.05, 'RL', tag='cs')
+    ridges(g, 'forend', 'B', 8.4, 18.0, 8, 0.2, cross=(-0.7, 0.7), d=0.03, tag='fb')
+    stepped_grip(g, 'grip', 4, per=2, d=0.035, width=0.12, tag='gr')
+    ridges(g, 'butt_plate', 'K', -4.4, 0.0, 8, 0.12, cross=(-0.7, 0.7), d=0.03, tag='bp', along='b')
+
+
+def d_dubeltowka(g):
+    muzzle_bore(g, 'barrel_l_a', 0.0, -0.62, 0.4)
+    muzzle_bore(g, 'barrel_r_a', 0.0, 0.62, 0.4)
+    ridges(g, 'rib', 'T', 0.6, 25.0, 22, 0.28, cross=(-0.12, 0.12), d=0.03, tag='rv')
+    studs(g, 'plate_r', [(25.5, -1.2), (31.0, -1.2), (25.5, 0.4), (31.0, 0.4)], 0.1, 0.04, 'R', tag='as')
+    studs(g, 'plate_l', [(25.5, -1.2), (31.0, -1.2), (25.5, 0.4), (31.0, 0.4)], 0.1, 0.04, 'L', tag='al')
+    ridges(g, 'lever', 'T', 29.2, 32.0, 5, 0.18, cross=(-0.2, 0.2), d=0.03, tag='lv')
+    ridges(g, 'wrist', 'RL', -2.0, 0.5, 8, 0.12, cross=(32.4, 35.4), d=0.03, tag='wr', along='b')
+    ridges(g, 'forend', 'RL', -1.3, -0.65, 3, 0.1, cross=(12.0, 21.5), d=0.03, tag='fe', along='b')
+    studs(g, 'hanger', [(23.3, -0.85)], 0.14, 0.04, 'RL', tag='hg')
+    ridges(g, 'butt_plate', 'K', -4.5, 0.0, 14, 0.13, cross=(-0.8, 0.8), d=0.03, tag='bp', along='b')
+    ridges(g, 'tg_bottom', 'T', 27.3, 31.7, 5, 0.12, cross=(-0.1, 0.1), d=0.02, tag='tg')
+
+
+def d_muszkiet(g):
+    muzzle_bore(g, 'barrel_a', 0.5, 0.0, 0.24)
+    ridges(g, 'rs_base', 'T', 36.1, 37.1, 3, 0.14, cross=(-0.25, 0.25), d=0.03, tag='rb')
+    ridges(g, 'forend', 'B', 3.0, 36.0, 16, 0.4, cross=(-0.45, 0.45), d=0.03, tag='fb')
+    ridges(g, 'wrist', 'RL', -2.0, 0.0, 6, 0.12, cross=(43.3, 45.7), d=0.03, tag='wr', along='b')
+    studs(g, 'lock_plate', [(34.0, -0.4), (39.9, -0.4), (36.5, 0.2)], 0.1, 0.04, 'R', tag='ls')
+    ridges(g, 'tang', 'T', 38.3, 42.2, 6, 0.2, cross=(-0.2, 0.2), d=0.03, tag='tn')
+    ridges(g, 'buttplate', 'K', -4.8, -0.6, 8, 0.14, cross=(-0.65, 0.65), d=0.03, tag='bp', along='b')
+    studs(g, 'rod_tip', [(1.85, -1.25)], 0.08, 0.03, 'RL', tag='rt')
+
+
 DETAIL = {'ak47': d_ak47, 'm4a1s': d_m4a1s, 'remmington': d_remmington, 'makarov': d_makarov, 'awp': d_awp,
           'mac10': d_mac10, 'm16': d_m16, 'sks': d_sks, 'deagle': d_deagle, 'sw1911': d_sw1911, 'p30': d_p30,
           'mp5': d_mp5, 'uzi': d_uzi, 'sg553': d_sg553, 'famas': d_famas, 'dragunov': d_dragunov, 'kar98k': d_kar98k,
-          'spas': d_spas, 'asval': d_asval, 'ppsh41': d_ppsh41, 'glock': d_glock, 'rpg': d_rpg}
+          'spas': d_spas, 'asval': d_asval, 'ppsh41': d_ppsh41, 'glock': d_glock, 'rpg': d_rpg,
+          'samopal': d_samopal, 'rewolwer': d_rewolwer, 'ruroowka': d_ruroowka, 'dubeltowka': d_dubeltowka,
+          'muszkiet': d_muszkiet}
 
 
 def apply(g):
     """Add the extra detail to a freshly built gun (idempotent per gun object)."""
     n0 = len(g.els)
-    DETAIL.get(g.name, lambda g: None)(g)
+    DETAIL[g.name](g)
     return len(g.els) - n0
