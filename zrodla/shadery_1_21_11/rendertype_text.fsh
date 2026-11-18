@@ -1086,7 +1086,7 @@ float axonSmoke(vec2 q, float t) {
     return mix(a, b, w);
 }
 
-vec3 axonEmbers(vec2 q, float t) {
+vec3 axonEmbers(vec2 q, float t, vec3 tint) {
     vec3 acc = vec3(0.0);
     float cyc = floor(t * 0.5);
     float ph = fract(t * 0.5);
@@ -1101,7 +1101,7 @@ vec3 axonEmbers(vec2 q, float t) {
         float x = x0 + sin(life * 6.2831 + seed) * 4.0;
         float d = length(q - vec2(x, y));
         float fade = smoothstep(0.0, 0.15, life) * (1.0 - smoothstep(0.55, 1.0, life));
-        vec3 c = mix(vec3(1.0, 0.55, 0.18), AXON_UI_ACC, axonHash(seed + 4.0) * 0.6);
+        vec3 c = mix(vec3(1.0, 0.55, 0.18), tint, axonHash(seed + 4.0) * 0.6);
         // jeden wykładnik zamiast dwóch: rdzeń i blask z tej samej krzywej
         float g = exp(-d * 0.25);
         acc += c * on * fade * (g * g * g * g * 1.4 + g * 0.25);
@@ -1197,10 +1197,67 @@ vec4 axonUiBox() {
             vec3 smc = mix(vec3(0.35, 0.4, 0.48), AXON_UI_ACC * 0.8, 0.25);
             bgc = mix(bgc, smc, dens * 0.55);
             // iskry
-            if (q.y > 170.0) bgc += axonEmbers(q, t) * (0.6 + 0.4 * smMask);
+            if (q.y > 170.0) bgc += axonEmbers(q, t, AXON_UI_ACC) * (0.6 + 0.4 * smMask);
             // ziarno
             bgc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.012;
             return vec4(bgc, 1.0);
+        }
+        // stan 2 (warsztat): kuźnia. Blachy z nitami, palenisko świeci od dołu, żar, iskry i falowanie gorąca.
+        if (state == 2) {
+            q = vec2(gl_FragCoord.x / ScreenSize.x * 640.0, (1.0 - gl_FragCoord.y / ScreenSize.y) * 384.0);
+            e = q / vec2(640.0, 384.0) - 0.5;
+            float ph = fract(t * 0.5);
+            float tau = 6.2831853;
+            float heat = exp(-(384.0 - q.y) / 120.0);
+            float flick = 0.86 + 0.09 * sin(ph * tau * 2.0) + 0.05 * sin(ph * tau * 3.0 + q.x * 0.015);
+            vec3 fire = vec3(1.0, 0.42, 0.12);
+            // falowanie gorąca: blachy nad paleniskiem drgają w poziomie
+            vec2 w = q;
+            w.x += 1.6 * heat * sin(q.y * 0.09 - ph * tau * 2.0);
+            // blachy 128×96, co drugi rząd przesunięty o pół
+            float row = floor(w.y / 96.0);
+            vec2 pw = vec2(w.x + mod(row, 2.0) * 64.0, w.y);
+            vec2 cell = floor(pw / vec2(128.0, 96.0));
+            vec2 lp = pw - cell * vec2(128.0, 96.0);
+            float hv = axonHash(dot(cell, vec2(1.0, 57.0)) + 3.1);
+            vec3 bg = vec3(0.075, 0.07, 0.068) + (hv - 0.5) * 0.025;
+            // szczotkowanie: drobne poziome rysy
+            bg += (axonHash(floor(w.y) * 1.7 + cell.x * 31.0) - 0.5) * 0.012;
+            bg *= mix(vec3(1.0), vec3(1.05, 0.95, 0.88), hv);
+            // spoiny: ciemna szczelina, jasny brzeg od dołu (światło idzie z paleniska)
+            float ex = min(lp.x, 128.0 - lp.x);
+            float ey = min(lp.y, 96.0 - lp.y);
+            float seam = 1.0 - smoothstep(0.6, 1.8, min(ex, ey));
+            float lip = (1.0 - smoothstep(1.5, 3.5, 96.0 - lp.y)) * step(1.8, ex);
+            bg *= 1.0 - 0.75 * seam;
+            bg += fire * 0.10 * lip * (0.3 + heat);
+            // nity w rogach blachy
+            vec2 rv = vec2(ex, ey) - 9.0;
+            float rd = length(rv);
+            float rivet = 1.0 - smoothstep(2.4, 3.2, rd);
+            float rlit = clamp(0.5 - rv.y * 0.18 * sign(lp.y - 48.0), 0.0, 1.0);
+            bg = mix(bg, vec3(0.13, 0.12, 0.115) + fire * 0.25 * heat * rlit, rivet);
+            bg *= 1.0 - 0.35 * (1.0 - smoothstep(2.6, 4.5, rd)) * (1.0 - rivet);
+            // światło paleniska na blachach
+            bg += fire * (0.08 + 0.42 * heat) * heat * flick;
+            bg += fire * 0.05 * (1.0 - smoothstep(0.0, 1.0, abs(e.x) * 1.6)) * smoothstep(120.0, 384.0, q.y);
+            // żar u samego dołu
+            if (q.y > 352.0) {
+                float coal = axonN2(vec2(q.x * 0.07, q.y * 0.22));
+                float pulse = 0.7 + 0.3 * sin(ph * tau + coal * tau);
+                float bed = smoothstep(352.0, 384.0, q.y);
+                bg += vec3(1.0, 0.36, 0.08) * smoothstep(0.35, 0.85, coal) * pulse * bed * 0.9;
+            }
+            // gorące powietrze nad żarem (tani dym tylko w dolnej części)
+            float smMask = smoothstep(240.0, 384.0, q.y);
+            if (smMask > 0.0) {
+                float dens = smoothstep(0.35, 0.85, axonSmoke(q, t)) * smMask;
+                bg = mix(bg, vec3(0.45, 0.2, 0.08), dens * 0.22);
+            }
+            if (q.y > 150.0) bg += axonEmbers(q, t, fire) * 1.1;
+            bg *= 1.0 - 0.45 * smoothstep(0.35, 0.85, length(e * vec2(1.15, 1.0)));
+            bg += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.01;
+            return vec4(bg, 1.0);
         }
         // stan 0 (/ustawienia): pełne tło w motywie ustawień, spokojne animacje o okresie 2 s
         q = vec2(gl_FragCoord.x / ScreenSize.x * 640.0, (1.0 - gl_FragCoord.y / ScreenSize.y) * 384.0);
@@ -1732,16 +1789,14 @@ void main() {
         float density = float(axonDensity);
         vec2 mapPixel = (vec2(float(axonTile % cols), float(axonTile / cols)) * 128.0 + texCoord0 * 128.0) / density;
         vec2 cursorPixel = axonCursor * vec2(float(AXON_COLS), float(AXON_ROWS)) * 128.0;
-        // Przezroczyste piksele mapy (kolor 0, okno /ustawienia): za przyciemnioną szybą widać świat.
+        // Przezroczyste piksele mapy (kolor 0): widać tło okna narysowane szybą pod płótnem.
         // Wiersze 0 i 127 niosą znaczniki kafla, więc dla nich sprawdzamy sąsiedni wiersz.
         ivec2 axonTp = ivec2(clamp(floor(texCoord0 * 128.0), 0.0, 127.0));
         axonTp.y = axonTp.y == 0 ? 1 : (axonTp.y == 127 ? 126 : axonTp.y);
         // (nie przy pełnej mapie po stronie klienta: tam pod przezroczystymi pikselami jest teren)
         if (!axonClient && texelFetch(Sampler0, axonTp, 0).a < 0.5) {
-            vec2 e = mapPixel / vec2(640.0, 384.0) - 0.5;
-            float vig = smoothstep(0.2, 0.75, length(e * vec2(1.15, 1.0)));
-            fragColor = vec4(0.015, 0.02, 0.03, 0.5 + 0.25 * vig);
-            return;
+            // pod płótnem leży tło okna (szyba z shadera, dalej niż kafle), więc piksel po prostu znika
+            discard;
         }
 
         // Sprity: rysowane w pikselach logicznych, z wygładzaniem do rozdzielczości ekranu.

@@ -641,7 +641,7 @@ float axonUiLayer(float az) {
 #define AXON_UI_STYLES 32
 // szerokość, wysokość, promień rogu, głębia (bliżej = bardziej ujemna)
 const vec4 AXON_UI_STYLE[AXON_UI_STYLES] = vec4[AXON_UI_STYLES](
-    vec4(640.0, 384.0, 0.0, -0.9900),    // 0 przyciemniona szyba (cały ekran, rysowana pierwsza)
+    vec4(640.0, 384.0, 0.0, -0.9890),    // 0 szyba / tło okna (cały ekran); dalej niż kafle mapy (-0.99), więc płótno z mapy leży na niej
     vec4(176.0, 384.0, 0.0, -0.9905),    // 1 szyna z kartami (lewa krawędź ekranu)
     vec4(172.0, 292.0, 10.0, -0.9910),   // 2 karta szczegółów
     vec4(160.0, 26.0, 6.0, -0.9920),     // 3 karta pluginu w szynie
