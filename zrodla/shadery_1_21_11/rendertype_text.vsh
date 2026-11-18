@@ -932,7 +932,9 @@ void main() {
         int tx = tile % cols;
         int ty = tile / cols;
         vec2 topLeft = vec2(-1.0 + float(tx) * tileSize.x, 1.0 - float(ty) * tileSize.y);
-        gl_Position = vec4(topLeft + vec2(UV0.x * tileSize.x, -UV0.y * tileSize.y), -0.99, 1.0);
+        vec2 overlap = 2.0 / ScreenSize; // jedna pikselowa zakładka usuwa szczeliny między mapowymi kaflami
+        vec2 edge = vec2(UV0.x < 0.5 ? -overlap.x : overlap.x, UV0.y < 0.5 ? overlap.y : -overlap.y);
+        gl_Position = vec4(topLeft + vec2(UV0.x * tileSize.x, -UV0.y * tileSize.y) + edge, -0.99, 1.0);
         sphericalVertexDistance = 0.0;
         cylindricalVertexDistance = 0.0;
     }
