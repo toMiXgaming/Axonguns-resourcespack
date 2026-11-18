@@ -1088,12 +1088,11 @@ float axonSmoke(vec2 q, float t) {
 
 vec3 axonEmbers(vec2 q, float t, vec3 tint) {
     vec3 acc = vec3(0.0);
-    float cyc = floor(t * 0.5);
     float ph = fract(t * 0.5);
     for (int k = 0; k < 2; k++) {
         float lane = 16.0 + float(k) * 7.0;
         float col = floor(q.x / lane);
-        float seed = col * 3.7 + float(k) * 91.0 + cyc * 13.1;
+        float seed = col * 3.7 + float(k) * 91.0;
         float on = step(0.55, axonHash(seed));
         float x0 = (col + 0.2 + 0.6 * axonHash(seed + 1.0)) * lane;
         float life = fract(ph + axonHash(seed + 2.0));
@@ -1199,7 +1198,7 @@ vec4 axonUiBox() {
             // iskry
             if (q.y > 170.0) bgc += axonEmbers(q, t, AXON_UI_ACC) * (0.6 + 0.4 * smMask);
             // ziarno
-            bgc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.012;
+            bgc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0))) - 0.5) * 0.012;
             return vec4(bgc, 1.0);
         }
         // stan 2 (warsztat): kuźnia. Blachy z nitami, palenisko świeci od dołu, żar, iskry i falowanie gorąca.
@@ -1282,10 +1281,9 @@ vec4 axonUiBox() {
         bg += AXON_UI_ACC * 0.05 * exp(-max(gd, 0.0) * 0.08);
         // pyłki unoszące się powoli
         vec3 dust = vec3(0.0);
-        float cyc = floor(t * 0.5);
         float lane = 22.0;
         float col = floor(q.x / lane);
-        float seed = col * 5.3 + cyc * 7.7;
+        float seed = col * 5.3;
         float on = step(0.35, axonHash(seed));
         float life = fract(ph + axonHash(seed + 2.0));
         vec2 mp = vec2((col + 0.2 + 0.6 * axonHash(seed + 1.0)) * lane + 3.0 * sin(life * 6.2831853 + seed),
@@ -1809,9 +1807,9 @@ void main() {
 
         // Kursor: krzyżyk z obwódką.
         vec2 d = abs(floor(mapPixel) - floor(cursorPixel));
-        if ((d.x <= 5.0 && d.y <= 0.0) || (d.y <= 5.0 && d.x <= 0.0)) {
+        if ((d.x <= 2.0 && d.y <= 0.0) || (d.y <= 2.0 && d.x <= 0.0)) {
             fragColor = vec4(1.0);
-        } else if ((d.x <= 6.0 && d.y <= 1.0) || (d.y <= 6.0 && d.x <= 1.0)) {
+        } else if ((d.x <= 3.0 && d.y <= 1.0) || (d.y <= 3.0 && d.x <= 1.0)) {
             fragColor = vec4(0.0, 0.0, 0.0, 1.0);
         }
         if (fragColor.a < 0.004) {
