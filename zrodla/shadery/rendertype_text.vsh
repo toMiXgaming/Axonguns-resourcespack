@@ -821,6 +821,8 @@ bool axonFullVertex() {
     return true;
 }
 
+#moj_import <minecraft:axon_gs_ui.glsl>
+
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     axonHud = 0;
@@ -853,6 +855,10 @@ void main() {
         if (axonHud != 0 && axonMapOpen(GameTime)) {
             gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);   // panel tablicy chowa się przy pełnej mapie AxonMap
         }
+        return;
+    }
+    if (axonGsUiVertex()) {
+        vertexDistance = 0.0;
         return;
     }
     if (axonUiVertex()) {
