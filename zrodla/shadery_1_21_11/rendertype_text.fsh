@@ -1109,6 +1109,15 @@ vec3 axonEmbers(vec2 q, float t) {
     return acc;
 }
 
+// Zębatka (odległość ze znakiem): n zębów, promień r, obrót o jeden ząb na cykl zegara (2 s), więc bez przeskoku.
+float axonGear(vec2 p, float r, float n, float turn) {
+    float a = atan(p.y, p.x) + turn * 6.2831853 / n;
+    float k = smoothstep(-0.25, 0.25, cos(a * n));
+    float outer = length(p) - (r + r * 0.12 * k);
+    float hole = r * 0.45 - length(p);
+    return max(outer, hole);
+}
+
 vec4 axonUiBox() {
     vec2 size = axonHudBox.xy;
     int style = int(axonHudBox.z + 0.5);
@@ -1193,7 +1202,44 @@ vec4 axonUiBox() {
             bgc += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.012;
             return vec4(bgc, 1.0);
         }
-        return vec4(vc, 0.5 + 0.25 * vig);
+        // stan 0 (/ustawienia): pełne tło w motywie ustawień, spokojne animacje o okresie 2 s
+        q = vec2(gl_FragCoord.x / ScreenSize.x * 640.0, (1.0 - gl_FragCoord.y / ScreenSize.y) * 384.0);
+        e = q / vec2(640.0, 384.0) - 0.5;
+        float ph = fract(t * 0.5);
+        vec3 bg = mix(vec3(0.028, 0.04, 0.048), vec3(0.01, 0.014, 0.02), smoothstep(0.0, 384.0, q.y));
+        // zorza: miękkie pasmo w akcencie, łagodnie faluje
+        float wave = 150.0 + 26.0 * sin(q.x * 0.012 + ph * 6.2831853) + 14.0 * sin(q.x * 0.027 - ph * 6.2831853);
+        float band = exp(-pow((q.y - wave) / 70.0, 2.0));
+        bg += AXON_UI_ACC * 0.16 * band * (0.6 + 0.4 * smoothstep(0.0, 640.0, q.x));
+        bg += vec3(0.25, 0.45, 0.9) * 0.08 * exp(-pow((q.y - wave - 60.0) / 50.0, 2.0));
+        // delikatna siatka kropek
+        vec2 gc = fract(q / 16.0) - 0.5;
+        bg += vec3(0.5, 0.6, 0.65) * 0.05 * (1.0 - smoothstep(0.0, 0.1, length(gc)));
+        // duże zębatki w tle: jedna w prawym dolnym rogu, druga mniejsza obok, kręcą się w przeciwne strony
+        float g1 = axonGear(q - vec2(600.0, 360.0), 120.0, 12.0, ph);
+        float g2 = axonGear(q - vec2(452.0, 318.0), 52.0, 8.0, -ph * 1.5);
+        float g3 = axonGear(q - vec2(250.0, 395.0), 80.0, 10.0, -ph);
+        float gd = min(min(g1, g2), g3);
+        bg += AXON_UI_ACC * 0.11 * (1.0 - smoothstep(-1.0, 1.0, gd));
+        bg += AXON_UI_ACC * 0.28 * (1.0 - smoothstep(0.0, 1.5, abs(gd)));
+        bg += AXON_UI_ACC * 0.05 * exp(-max(gd, 0.0) * 0.08);
+        // pyłki unoszące się powoli
+        vec3 dust = vec3(0.0);
+        float cyc = floor(t * 0.5);
+        float lane = 22.0;
+        float col = floor(q.x / lane);
+        float seed = col * 5.3 + cyc * 7.7;
+        float on = step(0.35, axonHash(seed));
+        float life = fract(ph + axonHash(seed + 2.0));
+        vec2 mp = vec2((col + 0.2 + 0.6 * axonHash(seed + 1.0)) * lane + 3.0 * sin(life * 6.2831853 + seed),
+                       40.0 + 320.0 * axonHash(seed + 3.0) - life * 26.0);
+        float md = length(q - mp);
+        float mf = sin(life * 3.14159);
+        float mg = exp(-md * 0.35);
+        bg += AXON_UI_ACC * on * mf * (mg * mg * mg * mg * 1.2 + mg * 0.16);
+        bg *= 1.0 - 0.25 * smoothstep(0.4, 0.85, length(e * vec2(1.15, 1.0)));
+        bg += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.01;
+        return vec4(bg, 1.0);
     }
 
     if (style >= 12) {
