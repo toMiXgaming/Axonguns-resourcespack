@@ -638,36 +638,36 @@
     },
     "firstperson_righthand": {
       "rotation": [
-        35,
-        -30,
-        -25
+        29,
+        -20,
+        -9
       ],
       "translation": [
-        -2.5,
-        5.5,
+        -3.5,
+        3.8,
         0
       ],
       "scale": [
-        0.48,
-        0.48,
-        0.48
+        0.43,
+        0.43,
+        0.43
       ]
     },
     "firstperson_lefthand": {
       "rotation": [
-        35,
-        -30,
-        -25
+        29,
+        -20,
+        -9
       ],
       "translation": [
-        -2.5,
-        5.5,
+        -3.5,
+        3.8,
         0
       ],
       "scale": [
-        0.48,
-        0.48,
-        0.48
+        0.43,
+        0.43,
+        0.43
       ]
     },
     "thirdperson_righthand": {
