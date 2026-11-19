@@ -474,7 +474,9 @@ bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
     vec2 top = vec2(floor(ScreenSize.x * 0.5), floor(0.012 * unit) + 1.0);
     float heading = axonHeading(f);
     vec2 l;
+    bool ore = (c.r >> 4) == 13;
     if (e == 15) {
+        if (ore) return false;
         // pasek: od lewej do prawej krawędzi, pod nim okienko z kierunkiem w stopniach
         vec2 lo = vec2(-halfW - 2.0, -2.0);
         vec2 hi = vec2(halfW + 2.0, bh + 13.0 * gp + 2.0);
@@ -487,8 +489,8 @@ bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
         float dist = length(rel);
         float d = mod(axonHeading(rel) - heading + 540.0, 360.0) - 180.0;
         float x = d / (span * 0.5) * halfW;
-        float ih = floor(bh * 0.36);
-        float lim = halfW - ih - 3.0;
+        float ih = ore ? max(6.0, floor(bh * 0.48)) : floor(bh * 0.36);
+        float lim = halfW - ih - (ore ? 6.0 : 3.0);
         float side = 0.0;
         if (abs(x) > lim) {
             side = sign(x);
@@ -500,11 +502,11 @@ bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
             label = 2.0;
         }
         float qx = max(ih, 14.0 * gp) + 2.0;
-        vec2 lo = vec2(-qx, -ih - 2.0);
-        vec2 hi = vec2(qx, bh * 0.5 + 25.0 * gp + 2.0);
+        vec2 lo = vec2(-qx - 4.0, -ih - 2.0);
+        vec2 hi = vec2(qx + 4.0, bh * 0.5 + 25.0 * gp + 2.0);
         l = mix(lo, hi, cv);
         axonMiniA = vec4(dist, side, 7.0 + float(c.r & 7) / 16.0, float(s));
-        axonMiniB = vec4(ih, gp, bh * 0.5, label);
+        axonMiniB = vec4(ih, gp, bh * 0.5, ore ? 3.0 + float(c.r & 7) : label);
         // bliższy cel leży wyżej, więc przy nachodzących znacznikach widać jego odległość
         float z = -0.9880 - 0.0009 * (1.0 - dist / (dist + 200.0));
         gl_Position = dist < 2.5 ? vec4(-10.0, -10.0, -10.0, 1.0)
@@ -522,7 +524,7 @@ bool axonMiniVertex() {
     }
     ivec3 c = ivec3(floor(Color.rgb * 255.0 + 0.5));
     int kind = c.r >> 4;
-    if (kind < 14) {
+    if (kind < 13) {
         return false;
     }
     int vc = gl_VertexID % 4;
@@ -532,6 +534,9 @@ bool axonMiniVertex() {
     int s;
     float z;
     vec2 l;
+    if (kind == 13) {
+        return (c.r & 15) <= 6 && axonCompassVertex(c, cv, atlas, f);
+    }
     if (kind == 15) {
         // znak kompasu (teksel 1 × 1 z alfą 249) albo kafel terenu (128 × 128, alfa 250 w lewym górnym tekselu)
         if (axonCompassVertex(c, cv, atlas, f)) {
