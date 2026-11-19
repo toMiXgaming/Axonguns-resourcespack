@@ -324,6 +324,11 @@ bool axonHudVertex() {
     int kind = (c.r - 64) / 16;
     bool banner = kind == 5 || kind == 6;
     bool right = (settings & 1) == 1 && !banner;
+    int cornerId = gl_VertexID % 4;
+    float markerX = kind != 0 && kind != 5 && (cornerId == 2 || cornerId == 3) ? AXON_MARKER : 0.0;
+    int carrier = int(floor((local.x-markerX)/2048.0+0.5));
+    bool edited = !banner && carrier > 0 && carrier <= 8192;
+    if (edited) { local.x -= float(carrier)*2048.0; right = false; }
     vec2 at = local;
     float z = Position.z + 3.0;   // 1.21.6+: z = 0 leży na dalekiej płaszczyźnie GUI, więc tylko w górę
     if (kind == 0 || kind == 5) {
@@ -405,6 +410,12 @@ bool axonHudVertex() {
         axonHud = kind + 1;
     }
     vec2 pos = banner ? axonBannerPlace(settings, at, guiSize) : axonHudPlace(settings, at, guiSize);
+    if (edited) {
+        int code = carrier-1;
+        vec2 origin = vec2(float(code & 63)/63.0,float((code>>6)&31)/31.0);
+        vec2 scales = 0.4 * pow(vec2(1.5),vec2((settings & 3) + ((code>>11)&1)*4, (settings>>2) + ((code>>12)&1)*4));
+        pos = (origin + at * scales / vec2(640,384)) * guiSize;
+    }
     gl_Position = ProjMat * ModelViewMat * vec4(pos, z, 1.0);
     return true;
 }
@@ -421,6 +432,13 @@ const float AXON_MINI_RANGE[4] = float[4](32.0, 64.0, 96.0, 128.0);
 const float AXON_MINI_SIDE[4] = float[4](0.20, 0.27, 0.35, 0.45);
 const float AXON_MINI_PAD = 0.07;
 
+vec2 axonAnchorXZ() {
+    return Position.x > 4096.0 ? Position.xz - round(Position.xz/128.0)*128.0 : Position.xz;
+}
+vec4 axonLayoutBox() {
+    ivec3 b = ivec3(round(Position/128.0));
+    return vec4(b.x-64,b.z,b.y%1024,b.y/1024) * ScreenSize.xyxy / vec4(640,384,640,384);
+}
 vec4 axonMiniRect(int s) {
     float unit = ScreenSize.y;
     float hs = floor(AXON_MINI_SIDE[(s >> 2) & 3] * unit * 0.5);
@@ -428,8 +446,14 @@ vec4 axonMiniRect(int s) {
     int corner = s & 3;
     float cx = (corner & 1) == 1 ? ScreenSize.x - m - hs : m + hs;
     float cy = corner >= 2 ? ScreenSize.y - m - hs - floor(0.14 * unit) : m + hs;
-    return vec4(cx, cy, hs, 0.0);
+    if (Position.x > 4096.0) {
+        vec4 box = axonLayoutBox();
+        return vec4(box.xy + box.zw * 0.5, box.zw * 0.5);
+    }
+    return vec4(cx, cy, hs, hs);
 }
+
+vec2 axonMapAspect(int s) { vec2 h = axonMiniRect(s).zw; return h/max(h.x,h.y); }
 
 vec4 axonMiniClip(vec2 px, float z) {
     return vec4(px.x / ScreenSize.x * 2.0 - 1.0, 1.0 - px.y / ScreenSize.y * 2.0, z, 1.0);
@@ -472,6 +496,12 @@ bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
     float bh = floor(AXON_COMPASS_H[size] * unit);
     float gp = max(1.0, floor(bh * 0.45 / 7.0 + 0.5));
     vec2 top = vec2(floor(ScreenSize.x * 0.5), floor(0.012 * unit) + 1.0);
+    if (Position.x > 4096.0) {
+        vec4 box = axonLayoutBox();
+        span = clamp(span * box.z / (2.0 * halfW), 30.0, 360.0);
+        halfW = box.z * 0.5;
+        top = vec2(box.x + halfW, box.y);
+    }
     float heading = axonHeading(f);
     vec2 l;
     bool ore = (c.r >> 4) == 13;
@@ -480,12 +510,13 @@ bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
         // pasek: od lewej do prawej krawędzi, pod nim okienko z kierunkiem w stopniach
         vec2 lo = vec2(-halfW - 2.0, -2.0);
         vec2 hi = vec2(halfW + 2.0, bh + 13.0 * gp + 2.0);
+        axonHudBox.xy = axonMapAspect(s);
         l = mix(lo, hi, cv);
         axonMiniA = vec4(heading, span, 6.0, float(s));
         axonMiniB = vec4(halfW, bh, gp, 0.0);
         gl_Position = axonMiniClip(top + l, -0.986);
     } else {
-        vec2 rel = vec2(float(c.g - 128), float(c.b - 128)) * exp2(float(e)) + Position.xz;
+        vec2 rel = vec2(float(c.g - 128), float(c.b - 128)) * exp2(float(e)) + axonAnchorXZ();
         float dist = length(rel);
         float d = mod(axonHeading(rel) - heading + 540.0, 360.0) - 180.0;
         float x = d / (span * 0.5) * halfW;
@@ -504,6 +535,7 @@ bool axonCompassVertex(ivec3 c, vec2 cv, vec2 atlas, vec2 f) {
         float qx = max(ih, 14.0 * gp) + 2.0;
         vec2 lo = vec2(-qx - 4.0, -ih - 2.0);
         vec2 hi = vec2(qx + 4.0, bh * 0.5 + 25.0 * gp + 2.0);
+        axonHudBox.xy = axonMapAspect(s);
         l = mix(lo, hi, cv);
         axonMiniA = vec4(dist, side, 7.0 + float(c.r & 7) / 16.0, float(s));
         axonMiniB = vec4(ih, gp, bh * 0.5, ore ? 3.0 + float(c.r & 7) : label);
@@ -550,7 +582,7 @@ bool axonMiniVertex() {
         s = (bits >> 12) & 255;
         vec2 d = vec2(float(((bits >> 9) & 7) - 2), float(((bits >> 6) & 7) - 2));
         vec2 a = vec2(float((bits >> 3) & 7), float(bits & 7)) * 16.0;
-        axonMiniA = vec4(a - Position.xz - d * 128.0, 5.0, float(s));
+        axonMiniA = vec4(a - axonAnchorXZ() - d * 128.0, 5.0, float(s));
         axonMiniB = vec4(vec2(t0), f);
         // Quad tylko na tę część minimapy, którą zajmuje ten kafel (zamiast całej minimapy dla każdego z
         // nawet 9 kafli): mniej pikseli do policzenia, a wynik ten sam. Zapas 4 bloków na próbki wygładzania.
@@ -562,6 +594,7 @@ bool axonMiniVertex() {
         for (int i = 0; i < 4; i++) {
             vec2 q = vec2(i == 1 || i == 2 ? 132.0 : -4.0, i >= 2 ? 132.0 : -4.0) - axonMiniA.xy;
             vec2 m = (rot ? vec2(dot(q, rr), -dot(q, f)) : q) / range;
+            m /= axonMapAspect(s);
             lo = min(lo, m);
             hi = max(hi, m);
         }
@@ -574,6 +607,7 @@ bool axonMiniVertex() {
             texCoord0 = UV0;
             return true;
         }
+        axonHudBox.xy = axonMapAspect(s);
         l = mix(lo, hi, cv);
         z = -0.992;
     } else {
@@ -590,14 +624,15 @@ bool axonMiniVertex() {
             int area = (c.r & 15) << 16 | c.g << 8 | c.b;
             float range = AXON_MINI_RANGE[(s >> 4) & 3];
             vec2 offset = vec2(float(((area >> 6) & 63) - 32), float((area & 63) - 32));
-            vec2 rel = offset * 16.0 + Position.xz;
+            vec2 rel = offset * 16.0 + axonAnchorXZ();
             vec2 r = vec2(-f.y, f.x);
             vec2 p = ((s >> 7) & 1) == 1 ? vec2(dot(rel, r), -dot(rel, f)) : rel;
             vec4 rect = axonMiniRect(s);
+            axonHudBox.xy = axonMapAspect(s);
             axonMiniA = vec4(p / range, 11.0, float(s));
-            axonMiniB.xy = vec2(float(area >> 12) / range, rect.z);
+            axonMiniB.xy = vec2(float(area >> 12) / range, max(rect.z,rect.w));
             l = cv * 2.0 - 1.0;
-            gl_Position = axonMiniClip(rect.xy + l * rect.z, -0.994);
+            gl_Position = axonMiniClip(rect.xy + l * rect.zw, -0.994);
             axonMiniL = l;
             vertexColor = vec4(1.0);
             texCoord0 = UV0;
@@ -608,10 +643,10 @@ bool axonMiniVertex() {
             float range = AXON_MINI_RANGE[(s >> 4) & 3];
             // przy zasięgu 96 i 128 bloków jednostka przesunięcia to 2 bloki (mieści ±254)
             float unit = ((s >> 4) & 3) >= 2 ? 2.0 : 1.0;
-            vec2 rel = vec2(float(c.g - 128), float(c.b - 128)) * unit + Position.xz;
+            vec2 rel = vec2(float(c.g - 128), float(c.b - 128)) * unit + axonAnchorXZ();
             vec2 r = vec2(-f.y, f.x);
             vec2 p = ((s >> 7) & 1) == 1 ? vec2(dot(rel, r), -dot(rel, f)) : rel;
-            p /= range;
+            p /= range * axonMapAspect(s);
             bool far = (c.r & 1) == 1;
             float edge = ((s >> 6) & 1) == 1 ? length(p) : max(abs(p.x), abs(p.y));
             if (far || edge > 0.9) {
@@ -623,7 +658,7 @@ bool axonMiniVertex() {
             vec4 rect = axonMiniRect(s);
             float ps = max(5.0, floor(rect.z * 0.1));
             l = cv * 2.0 - 1.0;
-            gl_Position = axonMiniClip(rect.xy + p * rect.z + l * ps, -0.995);
+            gl_Position = axonMiniClip(rect.xy + p * rect.zw + l * ps, -0.995);
             axonMiniL = l;
             vertexColor = vec4(1.0);
             texCoord0 = UV0;
@@ -634,7 +669,7 @@ bool axonMiniVertex() {
         z = role == 1 ? -0.990 : -0.997;
     }
     vec4 rect = axonMiniRect(s);
-    gl_Position = axonMiniClip(rect.xy + l * rect.z, z);
+    gl_Position = axonMiniClip(rect.xy + l * rect.zw, z);
     axonMiniL = l;
     vertexColor = vec4(1.0);
     texCoord0 = UV0;

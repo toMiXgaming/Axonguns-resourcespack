@@ -550,7 +550,7 @@ vec4 axonMiniOreArea() {
     vec2 l = axonMiniL;
     int s = int(axonMiniA.w + 0.5);
     if (axonMiniOutside(l, s, 0.0)) return vec4(0.0);
-    float d = length(l - axonMiniA.xy) - axonMiniB.x;
+    float d = length(l * axonHudBox.xy - axonMiniA.xy) - axonMiniB.x;
     float px = 1.0 / max(axonMiniB.y, 1.0);
     float fill = 1.0 - smoothstep(-px, px, d);
     float line = 1.0 - smoothstep(px * 0.6, px * 1.8, abs(d));
@@ -566,6 +566,7 @@ vec4 axonMiniTile() {
     float range = AXON_MINI_RANGE[(s >> 4) & 3];
     vec2 f = axonMiniB.zw;
     vec2 r = vec2(-f.y, f.x);
+    l *= axonHudBox.xy;
     // cztery próbki na piksel: przy oddaleniu teren nie migocze
     vec2 dl = vec2(dFdx(l.x), dFdy(l.y)) * 0.25;
     vec4 acc = vec4(0.0);

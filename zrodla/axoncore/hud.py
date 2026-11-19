@@ -168,6 +168,10 @@ def _slot(slot, delta):
 def pliki():
     files = {}
     providers = [{'type': 'space', 'advances': dict(tablica.SPACES, **{' ': 4, '\u200c': 0})}]
+    for bit in range(14):
+        for base, sign in ((0xED00, 1), (0xED10, -1)):
+            providers[0]['advances'][chr(base + bit)] = sign * (2048 << bit)
+
     for i, skin in enumerate(SKINY):
         name = 'skin_%s.png' % skin[0]
         buf = io.BytesIO()
