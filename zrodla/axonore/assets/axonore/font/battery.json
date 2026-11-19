@@ -1,1 +1,19 @@
-{"providers": [{"type": "bitmap", "file": "axonore:gui/battery.png", "height": 40, "ascent": 40, "chars": ["0123456789/+h"]}, {"type": "space", "advances": {" ": 2}}]}
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "axonore:gui/battery.png",
+      "height": 45,
+      "ascent": 45,
+      "chars": [
+        "0123456789/+h"
+      ]
+    },
+    {
+      "type": "space",
+      "advances": {
+        " ": 1
+      }
+    }
+  ]
+}
