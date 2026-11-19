@@ -935,6 +935,11 @@ void main() {
         axonSetLim(s, vec2(0.0));
     }
 
+    // Odstępy AxonScoreboard przenoszą dane w pozycji znaku. Nie wyświetlaj glifu zastępczego.
+    if (ProjMat[2][3] == 0.0 && all(equal(ivec3(floor(Color.rgb * 255.0 + 0.5)), ivec3(2, 13, 249)))) {
+        gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+        return;
+    }
     if (axonHudVertex()) {
         if (axonHud != 0 && axonMapOpen(GameTime)) {
             gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);   // panel tablicy chowa się przy pełnej mapie AxonMap
