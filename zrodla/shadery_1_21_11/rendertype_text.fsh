@@ -885,6 +885,44 @@ vec4 axonCompassBar() {
     return o;
 }
 
+// Sprites 8×8 surowców: indeksy palety zapisane po 4 bity na piksel.
+const uint AXON_ORE_ROWS[56] = uint[56](
+    0x00000000u, 0x00064600u, 0x00347430u, 0x06414630u, 0x03644760u, 0x56666630u, 0x05336300u, 0x00005000u,
+    0x00000440u, 0x00465174u, 0x06711176u, 0x46336563u, 0x43633333u, 0x43754334u, 0x44640440u, 0x04400000u,
+    0x00300000u, 0x03730000u, 0x03177000u, 0x03515500u, 0x03555530u, 0x43555534u, 0x44633664u, 0x00466400u,
+    0x00000000u, 0x07333700u, 0x43555530u, 0x43356617u, 0x73335554u, 0x75533330u, 0x47377370u, 0x04400400u,
+    0x00000000u, 0x00000000u, 0x00064000u, 0x00541400u, 0x05364760u, 0x05536450u, 0x00555500u, 0x00000000u,
+    0x00000000u, 0x00067000u, 0x00314700u, 0x05417160u, 0x03377770u, 0x05333460u, 0x00344300u, 0x00055000u,
+    0x00000000u, 0x00037000u, 0x00341600u, 0x05341150u, 0x05341150u, 0x00337700u, 0x00055000u, 0x00000000u);
+const uint AXON_ORE_PALETTE[56] = uint[56](
+    0u, 0x37383au, 0x000000u, 0x1e181fu, 0x2a2a2au, 0x0f0f15u, 0x262025u, 0x323335u,
+    0u, 0xfeefe4u, 0x000000u, 0x90785fu, 0x453d2eu, 0xd3ae94u, 0xa69684u, 0xebc8b0u,
+    0u, 0xf5f5acu, 0x000000u, 0xa68319u, 0x53392fu, 0xe1cf47u, 0x74624bu, 0xdcd386u,
+    0u, 0xfffffdu, 0x000000u, 0xdc9313u, 0x6f4717u, 0xfce767u, 0xfff9b5u, 0xb16311u,
+    0u, 0xd50801u, 0x000000u, 0x630801u, 0x9e0601u, 0x330200u, 0x7d0b01u, 0xb20801u,
+    0u, 0xc6fdf2u, 0x000000u, 0x1e9f9cu, 0x61e0cfu, 0x135d53u, 0x60a0a6u, 0x97d8d5u,
+    0u, 0x78f8a9u, 0x000000u, 0x0ca53cu, 0x41d06du, 0x005300u, 0x9ad4a9u, 0x47a65cu);
+
+vec4 axonOreIcon(vec2 p, float radius, int ore, float side) {
+    float size = 2.0 * radius;
+    ivec2 cell = ivec2(floor((p / size + 0.5) * 8.0));
+    float badge = axonRoundBox(p, vec2(radius + 1.0), 3.0);
+    float border = 1.0 - smoothstep(-0.5, 0.5, badge);
+    float fill = 1.0 - smoothstep(-1.5, -0.5, badge);
+    vec4 base = vec4(mix(vec3(0.73, 0.60, 0.37), vec3(0.07, 0.085, 0.11), fill), border);
+    if (any(lessThan(cell, ivec2(0))) || any(greaterThanEqual(cell, ivec2(8)))) {
+        if (abs(side) < 0.5) return base;
+        // Mały grot obok ikonki, gdy cel jest poza zakresem paska.
+        vec2 arrow = vec2(p.x * side - radius - 1.0, p.y);
+        float shape = max(-arrow.x, arrow.x + abs(arrow.y) - 4.0);
+        return axonMiniOver(vec4(1.0, 0.8, 0.45, 1.0 - smoothstep(-0.5, 0.5, shape)), base);
+    }
+    uint index = (AXON_ORE_ROWS[ore * 8 + cell.y] >> (4 * cell.x)) & 15u;
+    if (index == 0u) return base;
+    uint rgb = AXON_ORE_PALETTE[ore * 8 + int(index)];
+    return vec4(vec3(float((rgb >> 16) & 255u), float((rgb >> 8) & 255u), float(rgb & 255u)) / 255.0, 1.0);
+}
+
 vec4 axonCompassMarker() {
     vec2 p = axonMiniL;
     float dist = axonMiniA.x;
@@ -893,6 +931,7 @@ vec4 axonCompassMarker() {
     float ih = axonMiniB.x;
     float gp = axonMiniB.y;
     float half_ = axonMiniB.z;
+    if (axonMiniB.w >= 3.0) return axonOreIcon(p, ih, int(axonMiniB.w) - 3, side);
     vec4 o = vec4(0.0);
     if (abs(side) < 0.5 && (axonMiniB.w < 0.5 || axonMiniB.w > 1.5)) {
         // odległość pod paskiem (serwer zostawia napis tylko najbliższemu z celów leżących obok siebie),
