@@ -580,6 +580,24 @@ bool axonMiniVertex() {
         s = int(tx.r * 255.0 + 0.5);
         int role = int(tx.g * 255.0 + 0.5);
         axonMiniB = vec4(0.0, 0.0, f);
+        if (role == 2 && (c.r != 224 || c.g != 0 || c.b != 0)) {
+            // Obszar AxonOre: 8 bitów promienia i dwa przesunięcia po 6 bitów (co 16 bloków).
+            int area = (c.r & 15) << 16 | c.g << 8 | c.b;
+            float range = AXON_MINI_RANGE[(s >> 4) & 3];
+            vec2 offset = vec2(float(((area >> 6) & 63) - 32), float((area & 63) - 32));
+            vec2 rel = offset * 16.0 + Position.xz;
+            vec2 r = vec2(-f.y, f.x);
+            vec2 p = ((s >> 7) & 1) == 1 ? vec2(dot(rel, r), -dot(rel, f)) : rel;
+            vec4 rect = axonMiniRect(s);
+            axonMiniA = vec4(p / range, 11.0, float(s));
+            axonMiniB.xy = vec2(float(area >> 12) / range, rect.z);
+            l = cv * 2.0 - 1.0;
+            gl_Position = axonMiniClip(rect.xy + l * rect.z, -0.994);
+            axonMiniL = l;
+            vertexColor = vec4(1.0);
+            texCoord0 = UV0;
+            return true;
+        }
         if (role == 3) {
             // znacznik: pozycja względem kamery = przesunięcie od kotwicy + Position
             float range = AXON_MINI_RANGE[(s >> 4) & 3];
