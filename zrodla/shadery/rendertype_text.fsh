@@ -546,6 +546,17 @@ bool axonMiniOutside(vec2 l, int s, float grow) {
     return axonMiniEdge(l, s) > grow;
 }
 
+vec4 axonMiniOreArea() {
+    vec2 l = axonMiniL;
+    int s = int(axonMiniA.w + 0.5);
+    if (axonMiniOutside(l, s, 0.0)) return vec4(0.0);
+    float d = length(l - axonMiniA.xy) - axonMiniB.x;
+    float px = 1.0 / max(axonMiniB.y, 1.0);
+    float fill = 1.0 - smoothstep(-px, px, d);
+    float line = 1.0 - smoothstep(px * 0.6, px * 1.8, abs(d));
+    return vec4(1.0, 0.80, 0.40, max(0.19 * fill, 0.83 * line));
+}
+
 vec4 axonMiniTile() {
     vec2 l = axonMiniL;
     int s = int(axonMiniA.w + 0.5);
@@ -672,11 +683,14 @@ vec4 axonMiniFrame(bool front) {
 }
 
 const vec3 AXON_MINI_PINS[8] = vec3[8](vec3(1.0, 0.58, 0.18), vec3(0.32, 0.86, 1.0), vec3(0.93, 0.91, 0.86),
-        vec3(0.36, 0.9, 0.5), vec3(0.38, 0.58, 1.0), vec3(0.95, 0.27, 0.25), vec3(1.0, 0.84, 0.26), vec3(0.8, 0.52, 1.0));
+        vec3(0.36, 0.9, 0.5), vec3(0.38, 0.58, 1.0), vec3(0.95, 0.27, 0.25), vec3(1.0, 0.84, 0.26), vec3(1.0, 0.80, 0.40));
 
 // Kształt znacznika (ujemny w środku): działka = zaokrąglony kwadrat, członek działki = kółko,
 // struktura = romb, punkt = pinezka, śmierć = krzyżyk.
 float axonMiniPinShape(vec2 l, int type) {
+    if (type == 7) {
+        return length(l) - 0.5;
+    }
     if (type == 5) {
         float x = min(abs(l.x - l.y), abs(l.x + l.y)) * 0.7071 - 0.13;
         return max(x, length(l) - 0.62);
@@ -1725,6 +1739,8 @@ void main() {
             fragColor = axonFullPin();
         } else if (k == 10) {
             fragColor = axonFullBack();
+        } else if (k == 11) {
+            fragColor = axonMiniOreArea();
         } else if (k == 5) {
             fragColor = axonMiniTile();
         } else if (k == 3) {
