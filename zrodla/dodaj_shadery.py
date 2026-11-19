@@ -11,6 +11,7 @@ Na końcu przebudowuje QualityArmory-21-axon-1.21.11-shadery.zip (buduj_1_21_11.
 wysyła klientom 1.21.11.
 """
 import os
+from pathlib import Path
 import shutil
 import sys
 import zipfile
@@ -39,8 +40,15 @@ def shader_files():
     return files
 
 
+def scanner_files():
+    source = Path(HERE, "axonore")
+    return {asset.relative_to(source).as_posix(): asset.read_bytes()
+            for asset in (source / "assets").rglob("*") if asset.is_file()}
+
+
 def main():
     files = shader_files()
+    files.update(scanner_files())
     overlays = ('axon_shadery/', 'axon_shadery_1_21_0/', 'axon_shadery_1_21_11/')
     for zip_name in ZIPS:
         path = os.path.join(ROOT, zip_name)

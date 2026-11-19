@@ -172,6 +172,9 @@ def main():
     if os.path.exists(mc):
         repl['pack.mcmeta'] = open(mc, 'rb').read()
     names = zin.namelist()
+    from dodaj_shadery import scanner_files
+    repl.update(scanner_files())
+
     with zipfile.ZipFile(DST, 'w', zipfile.ZIP_DEFLATED) as zout:
         for info in zin.infolist():
             if info.filename.startswith(DROP):
