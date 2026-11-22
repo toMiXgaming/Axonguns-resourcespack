@@ -3,8 +3,8 @@
 
 Zamiast patrzeć przez model lunety (rura, która zasłania pół ekranu) przy celowaniu klient rysuje płaską
 nakładkę tuż przed kamerą, zawsze na środku ekranu, niezależnie od broni:
-- luneta: okular z cienką muszlą oczną, krótki tubus w perspektywie i soczewka z siatką (okno 80% wysokości
-  ekranu); bez czarnego tła, dookoła widać świat,
+- luneta: płaska karta z teksturą w wysokiej rozdzielczości (okular.py): gruby gumowy okular z bliska,
+  korpus z pokrętłami, okno ze szkłem i siatką mil-dot; poza rysunkiem przezroczysta, dookoła widać świat,
 - kolimator: sama czerwona kropka na środku, broń i przyrządy widać dalej,
 - holo: czerwony pierścień z kropką.
 
@@ -17,6 +17,8 @@ Wariant „cel” to naładowana kusza (klient dokłada przesunięcie i obrót o
 """
 import io
 import json
+
+import okular
 import math
 
 import numpy as np
@@ -34,6 +36,9 @@ Z0, Z1 = 8.0, 8.05
 
 TEX = 'qualityarmory:axon/celownik'
 TEX_PLIK = 'assets/qualityarmory/textures/axon/celownik.png'
+TEX_OKULAR = 'qualityarmory:axon/luneta_okular'
+TEX_OKULAR_PLIK = 'assets/qualityarmory/textures/axon/luneta_okular.png'
+KARTA_POL = 1.04 * POL_EKRANU / JEDN               # połowa wysokości karty lunety (trochę ponad ekran)
 MODEL_DIR = 'assets/axon/models/celownik/'
 RODZAJE = ('luneta', 'kolimator', 'holo')
 
@@ -78,7 +83,7 @@ def _box(x0, x1, y0, y1, uv, z0=Z0, z1=Z1):
             'shade': False, 'faces': {k: dict(face) for k in ('north', 'south', 'east', 'west', 'up', 'down')}}
 
 
-# Luneta 3D: cienka muszla oczna wokół okna (bez tła), za nią krótki tubus (w perspektywie widać jego ścianki, ciemne przy oku
+# Dawna luneta 3D z klocków (zostaje do podglądów): cienka muszla oczna wokół okna (bez tła), za nią krótki tubus (w perspektywie widać jego ścianki, ciemne przy oku
 # i jaśniejsze w głębi), obręcz soczewki z lekko przyciemnionym szkłem i siatka w głębi, na soczewce.
 TUBUS_DL = 2.6                  # długość tubusu w jednostkach modelu (soczewka ~72% wysokości ekranu)
 TUBUS_ZEW = 1.0                 # grubość ścianki tubusu (schowana za muszlą oczną)
@@ -185,7 +190,21 @@ def _display(charged):
     return {'firstperson_righthand': {'rotation': rot, 'translation': t16, 'scale': [SKALA] * 3}}
 
 
+def _karta_lunety():
+    """Jedna płaszczyzna 2:1 z teksturą okularu, zwrócona do kamery (ściana south)."""
+    h = round(KARTA_POL, 4)
+    return [{'from': [round(C - 2 * h, 4), round(C - h, 4), Z0], 'to': [round(C + 2 * h, 4), round(C + h, 4), Z0],
+             'shade': False, 'faces': {'south': {'uv': [0, 0, 16, 16], 'texture': '#t'}}}]
+
+
 def model(rodzaj):
+    if rodzaj == 'luneta':
+        els = _karta_lunety()
+        for e in els:
+            for k in (0, 1, 2):
+                assert -16 <= e['from'][k] <= 32 and -16 <= e['to'][k] <= 32, e
+        return {'credit': 'AXON - celowniki.py', 'ambientocclusion': False,
+                'textures': {'t': TEX_OKULAR, 'particle': TEX_OKULAR}, 'elements': els}
     els = {'luneta': _luneta, 'kolimator': _kolimator, 'holo': _holo}[rodzaj]()
     for e in els:
         for k in (0, 1, 2):
@@ -199,7 +218,7 @@ def ref(rodzaj, wariant):
 
 
 def pliki():
-    out = {TEX_PLIK: _tekstura()}
+    out = {TEX_PLIK: _tekstura(), TEX_OKULAR_PLIK: okular.png()}
     for r in RODZAJE:
         out[MODEL_DIR + '%s.json' % r] = (json.dumps(model(r), indent=1) + '\n').encode()
         for wariant, charged in (('cel', True), ('cel_u', False)):
