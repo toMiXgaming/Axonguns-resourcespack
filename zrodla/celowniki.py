@@ -3,8 +3,8 @@
 
 Zamiast patrzeć przez model lunety (rura, która zasłania pół ekranu) przy celowaniu klient rysuje płaską
 nakładkę tuż przed kamerą, zawsze na środku ekranu, niezależnie od broni:
-- luneta: czarna osłona z dużym okrągłym oknem (85% wysokości ekranu) i cienką siatką (grube ramiona
-  na brzegach, cienki krzyż w środku); broni wtedy nie widać, jak w prawdziwej lunecie,
+- luneta: okular z cienką muszlą oczną, krótki tubus w perspektywie i soczewka z siatką (okno 80% wysokości
+  ekranu); bez czarnego tła, dookoła widać świat,
 - kolimator: sama czerwona kropka na środku, broń i przyrządy widać dalej,
 - holo: czerwony pierścień z kropką.
 
@@ -28,8 +28,7 @@ ODL = 0.12                      # bloki od oka do nakładki (bliska płaszczyzna
 SKALA = 0.14                    # 1 jednostka modelu = SKALA/16 bloku
 POL_EKRANU = ODL * math.tan(math.radians(35))      # połowa wysokości ekranu na tej odległości (FOV ręki 70)
 JEDN = SKALA / 16.0
-R_OKNA = 0.85 * POL_EKRANU / JEDN                   # promień okna lunety w jednostkach modelu
-ZASIEG = 24.0                   # osłona sięga ±24 jednostek od środka (szeroki ekran 21:9 też zakryty)
+R_OKNA = 0.8 * POL_EKRANU / JEDN                    # promień okna lunety w jednostkach modelu
 C = 8.0                         # środek modelu
 Z0, Z1 = 8.0, 8.05
 
@@ -43,7 +42,7 @@ CHARGED_T = np.array([-0.641864, 0.0, 0.0])
 CHARGED_R = rot_axis('y', 10.0)
 
 # tekstura 8×4: jeden kolor na kolumnę (uv w jednostkach 0–16, po 2 na kolumnę)
-KOLORY = [(10, 10, 12, 255),       # 0 czerń (osłona, siatka)
+KOLORY = [(10, 10, 12, 255),       # 0 czerń (muszla, siatka)
           (46, 48, 53, 255),       # 1 obudowa
           (255, 40, 30, 255),      # 2 czerwień (kropka)
           (120, 175, 215, 46),     # 3 szybka
@@ -79,26 +78,19 @@ def _box(x0, x1, y0, y1, uv, z0=Z0, z1=Z1):
             'shade': False, 'faces': {k: dict(face) for k in ('north', 'south', 'east', 'west', 'up', 'down')}}
 
 
-# Luneta 3D: osłona oka z oknem, za nią krótki tubus (w perspektywie widać jego ścianki, ciemne przy oku
+# Luneta 3D: cienka muszla oczna wokół okna (bez tła), za nią krótki tubus (w perspektywie widać jego ścianki, ciemne przy oku
 # i jaśniejsze w głębi), obręcz soczewki z lekko przyciemnionym szkłem i siatka w głębi, na soczewce.
 TUBUS_DL = 2.6                  # długość tubusu w jednostkach modelu (soczewka ~72% wysokości ekranu)
-TUBUS_ZEW = 2.2                 # grubość ścianki tubusu (poza oknem, i tak zasłonięta osłoną)
+TUBUS_ZEW = 1.0                 # grubość ścianki tubusu (schowana za muszlą oczną)
+MUSZLA = 0.9                     # cienka muszla oczna wokół okna; dalej widać świat (bez czarnego tła)
 
 
 def _luneta():
     els = []
-    R, Z = R_OKNA, ZASIEG
-    krok = 0.35
-    n = int(math.ceil(2 * R / krok))
-    for i in range(n):
-        y0 = -R + i * krok
-        y1 = min(R, y0 + krok)
-        yc = max(abs(y0), abs(y1)) if y0 * y1 > 0 else 0.0      # zewnętrzna krawędź paska
-        half = math.sqrt(max(0.0, R * R - yc * yc))
-        els.append(_box(-Z, -half, y0, y1, CZARNY))
-        els.append(_box(half, Z, y0, y1, CZARNY))
-    els.append(_box(-Z, Z, R, Z, CZARNY))
-    els.append(_box(-Z, Z, -Z, -R, CZARNY))
+    R = R_OKNA
+    # muszla oczna: gumowy pierścień wokół okna z jaśniejszym rantem, bez osłony na resztę ekranu
+    els += _pierscien(R, R + MUSZLA, CZARNY, Z0, Z1 + 0.3, krok=0.3)
+    els += _pierscien(R + MUSZLA - 0.25, R + MUSZLA, OBUDOWA, Z0, Z1 + 0.35, krok=0.3)
     # tubus: plastry od oka w głąb, coraz jaśniejsze
     zs = [Z0 - TUBUS_DL * k / 6 for k in range(7)]
     for k in range(6):
