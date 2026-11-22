@@ -42,15 +42,18 @@ ARM_R = np.array([0.56, -0.52, -0.72])
 CHARGED_T = np.array([-0.641864, 0.0, 0.0])
 CHARGED_R = rot_axis('y', 10.0)
 
-CZARNY = [0, 0, 8, 16]
-CZERWONY = [8, 0, 16, 16]
+CZARNY = [0, 0, 4, 16]
+OBUDOWA = [4, 0, 8, 16]
+CZERWONY = [8, 0, 12, 16]
+SZYBKA = [12, 0, 16, 16]
 
 
 def _tekstura():
-    img = Image.new('RGBA', (4, 4), (10, 10, 12, 255))
-    for x in (2, 3):
+    kolory = [(10, 10, 12, 255), (46, 48, 53, 255), (255, 40, 30, 255), (120, 175, 215, 46)]
+    img = Image.new('RGBA', (4, 4))
+    for x, c in enumerate(kolory):
         for y in range(4):
-            img.putpixel((x, y), (255, 36, 28, 255))
+            img.putpixel((x, y), c)
     buf = io.BytesIO()
     img.save(buf, 'PNG')
     return buf.getvalue()
@@ -91,17 +94,60 @@ def _luneta():
     return els
 
 
-def _kropka(r=0.05):
+def _kropka(r=0.09):
     return [_box(-r, r, -r, r, CZERWONY, Z0 - 0.02, Z0)]
 
 
+def _pierscien(rin, rout, uv, z0, z1, krok=0.12):
+    """Pierścień (rin = 0: koło) z poziomych pasków."""
+    els = []
+    n = int(math.ceil(2 * rout / krok))
+    for i in range(n):
+        y0 = -rout + i * krok
+        y1 = min(rout, y0 + krok)
+        ym = (y0 + y1) / 2
+        if abs(ym) >= rout:
+            continue
+        xo = math.sqrt(rout * rout - ym * ym)
+        if rin > 0 and abs(ym) < rin:
+            xi = math.sqrt(rin * rin - ym * ym)
+            els.append(_box(-xo, -xi, y0, y1, uv, z0, z1))
+            els.append(_box(xi, xo, y0, y1, uv, z0, z1))
+        else:
+            els.append(_box(-xo, xo, y0, y1, uv, z0, z1))
+    return els
+
+
+# Kolimator (rura jak Aimpoint widziana od tyłu): obudowa wokół okna, przyciemniona szybka i jasna kropka.
+KOL_OKNO, KOL_OBUDOWA = 2.3, 3.0
+
+
+def _kolimator():
+    els = _kropka()
+    els += _pierscien(0, KOL_OKNO, SZYBKA, Z0 - 0.3, Z0 - 0.28)
+    els += _pierscien(KOL_OKNO, KOL_OBUDOWA, OBUDOWA, Z0, Z1, krok=0.15)
+    # pokrętło jasności z prawej i montaż pod spodem
+    els.append(_box(KOL_OBUDOWA - 0.2, KOL_OBUDOWA + 0.55, -0.45, 0.45, OBUDOWA))
+    els.append(_box(-1.6, 1.6, -KOL_OBUDOWA - 0.7, -KOL_OBUDOWA + 0.4, OBUDOWA))
+    els.append(_box(-2.2, 2.2, -KOL_OBUDOWA - 1.1, -KOL_OBUDOWA - 0.7, CZARNY))
+    return els
+
+
+# Holo (prostokątne okno jak EOTech): rama z daszkiem, szybka, pierścień i kropka.
 def _holo():
-    els = _kropka(0.045)
-    R, t = 1.1, 0.035
-    for i in range(64):
-        a = 2 * math.pi * i / 64
+    els = _kropka(0.07)
+    R, t = 1.3, 0.045
+    for i in range(72):
+        a = 2 * math.pi * i / 72
         x, y = R * math.cos(a), R * math.sin(a)
         els.append(_box(x - t, x + t, y - t, y + t, CZERWONY, Z0 - 0.02, Z0))
+    wx, wy0, wy1 = 3.4, -2.4, 2.6          # okno
+    fx, fy0, fy1 = 4.2, -3.2, 3.5          # rama
+    els.append(_box(-wx, wx, wy0, wy1, SZYBKA, Z0 - 0.3, Z0 - 0.28))
+    els += [_box(-fx, -wx, fy0, fy1, OBUDOWA), _box(wx, fx, fy0, fy1, OBUDOWA),
+            _box(-wx, wx, wy1, fy1, OBUDOWA), _box(-wx, wx, fy0, wy0, OBUDOWA),
+            _box(-fx - 0.2, fx + 0.2, fy1 - 0.25, fy1 + 0.2, CZARNY),               # daszek
+            _box(-fx, fx, fy0 - 1.0, fy0, CZARNY)]                                   # podstawa z baterią
     return els
 
 
@@ -120,7 +166,7 @@ def _display(charged):
 
 
 def model(rodzaj):
-    els = {'luneta': _luneta, 'kolimator': _kropka, 'holo': _holo}[rodzaj]()
+    els = {'luneta': _luneta, 'kolimator': _kolimator, 'holo': _holo}[rodzaj]()
     for e in els:
         for k in (0, 1, 2):
             assert -16 <= e['from'][k] <= 32 and -16 <= e['to'][k] <= 32, e

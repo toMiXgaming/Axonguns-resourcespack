@@ -67,7 +67,7 @@ Dodatki na broni (`zrodla/gen_dodatki.py`) włącza flaga `custom_model_data` od
 
 Przy celowaniu (`zrodla/celowniki.py`) celowniki nie są już modelem na broni, tylko płaską nakładką tuż przed okiem, zawsze na środku ekranu:
 - luneta (flaga lunety, a w AWP i Dragunovie zawsze): czarna osłona z dużym okrągłym oknem (85% wysokości ekranu) i cienką siatką, broni wtedy nie widać. Zastępuje dawną rurę AWP, przez którą było widać tylko mały kwadrat,
-- kolimator: czerwona kropka, holo: czerwony pierścień z kropką; broń i przyrządy widać dalej.
+- kolimator: okrągła obudowa (jak Aimpoint) z lekko przyciemnioną szybką i czerwoną kropką, holo: prostokątna rama z daszkiem (jak EOTech), szybka, czerwony pierścień z kropką; broń pod spodem widać dalej.
 
 Przedmiot w pierwszej osobie ma stały FOV 70, więc nakładka zajmuje zawsze to samo miejsce, a przybliżenie robi plugin. Podgląd: `podglady/celowniki.png`, `podglady/dodatki-nowe.png`.
 
