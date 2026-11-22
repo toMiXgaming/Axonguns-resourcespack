@@ -5,9 +5,8 @@ Zamiast patrzeć przez model lunety (rura, która zasłania pół ekranu) przy c
 nakładkę tuż przed kamerą, zawsze na środku ekranu, niezależnie od broni:
 - luneta: płaska karta z teksturą w wysokiej rozdzielczości (okular.py): gruby gumowy okular z bliska,
   korpus z nitami, okno ze szkłem i siatką mil-dot; poza rysunkiem przezroczysta, dookoła widać świat,
-- kolimator: karta z teksturą (kolimatory.py): obudowa jak Aimpoint od tyłu, pokrętło, montaż, szkło i kropka;
-  broń widać dalej,
-- holo: karta z teksturą: rama jak EOTech z daszkiem i podstawą, szkło, czerwony pierścień z kropką.
+- kolimator i holo nie mają nakładki: przy celowaniu widać ich klockowy model 3D na broni
+  (gen_dodatki.OPTYKA_3D), a broń jest przesunięta tak, żeby kropka była na środku ekranu.
 
 Nakładkę włącza flaga dodatku w custom_model_data (ta sama co model dodatku na broni, gen_dodatki.FLAG).
 AWP i Dragunov mają lunetę w modelu, więc przy celowaniu zawsze dostają nakładkę lunety.
@@ -19,7 +18,6 @@ Wariant „cel” to naładowana kusza (klient dokłada przesunięcie i obrót o
 import io
 import json
 
-import kolimatory
 import okular
 import math
 
@@ -41,12 +39,8 @@ TEX_PLIK = 'assets/qualityarmory/textures/axon/celownik.png'
 TEX_OKULAR = 'qualityarmory:axon/luneta_okular'
 TEX_OKULAR_PLIK = 'assets/qualityarmory/textures/axon/luneta_okular.png'
 KARTA_POL = 1.04 * POL_EKRANU / JEDN               # połowa wysokości karty lunety (trochę ponad ekran)
-# kolimator i holo: kwadratowe karty z teksturą z kolimatory.py (połowa boku w jednostkach modelu)
-KARTY = {'kolimator': 4.5, 'holo': 5.0}
-TEX_KARTY = {r: 'qualityarmory:axon/celownik_%s' % r for r in KARTY}
-TEX_KARTY_PLIK = {r: 'assets/qualityarmory/textures/axon/celownik_%s.png' % r for r in KARTY}
 MODEL_DIR = 'assets/axon/models/celownik/'
-RODZAJE = ('luneta', 'kolimator', 'holo')
+RODZAJE = ('luneta',)   # kolimator i holo: model 3D na broni (gen_dodatki.OPTYKA_3D)
 
 ARM_R = np.array([0.56, -0.52, -0.72])
 CHARGED_T = np.array([-0.641864, 0.0, 0.0])
@@ -204,10 +198,8 @@ def _karta(pw, ph):
 
 
 def model(rodzaj):
-    if rodzaj == 'luneta':
-        els, tex = _karta(2 * KARTA_POL, KARTA_POL), TEX_OKULAR
-    else:
-        els, tex = _karta(KARTY[rodzaj], KARTY[rodzaj]), TEX_KARTY[rodzaj]
+    assert rodzaj == 'luneta', rodzaj
+    els, tex = _karta(2 * KARTA_POL, KARTA_POL), TEX_OKULAR
     for e in els:
         for k in (0, 1, 2):
             assert -16 <= e['from'][k] <= 32 and -16 <= e['to'][k] <= 32, e
@@ -231,8 +223,6 @@ def ref(rodzaj, wariant):
 
 def pliki():
     out = {TEX_PLIK: _tekstura(), TEX_OKULAR_PLIK: okular.png()}
-    for r in KARTY:
-        out[TEX_KARTY_PLIK[r]] = kolimatory.png(r)
     for r in RODZAJE:
         out[MODEL_DIR + '%s.json' % r] = (json.dumps(model(r), indent=1) + '\n').encode()
         for wariant, charged in (('cel', True), ('cel_u', False)):

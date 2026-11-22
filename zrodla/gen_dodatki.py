@@ -26,7 +26,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gen  # noqa: E402
-from render import rot_xyz  # noqa: E402
+from render import apply_display, rot_axis, rot_xyz  # noqa: E402
 
 DODATKI = ['tlumik', 'kompensator', 'chwyt', 'latarka', 'luneta', 'kolimator', 'laser', 'dwojnog', 'magazynek',
            'kolba', 'lufa_dluga', 'holo', 'chwyt_katowy', 'magazynek_szybki']
@@ -39,7 +39,13 @@ NAZWY = {'tlumik': 'Tłumik', 'kompensator': 'Kompensator', 'chwyt': 'Chwyt prze
          'laser': 'Celownik laserowy', 'dwojnog': 'Dwójnóg', 'magazynek': 'Powiększony magazynek',
          'kolba': 'Nakładka na kolbę', 'lufa_dluga': 'Przedłużona lufa', 'holo': 'Celownik holograficzny',
          'chwyt_katowy': 'Chwyt kątowy', 'magazynek_szybki': 'Szybki magazynek'}
-BEZ_CELOWANIA = {'luneta', 'kolimator', 'holo'}   # przy celowaniu zamiast modelu jest widok celownika (celowniki.py)
+BEZ_CELOWANIA = {'luneta'}   # przy celowaniu zamiast modelu jest widok lunety (celowniki.py)
+# Kolimator i holo przy celowaniu: ten sam model 3D co na broni, a cała broń jest przesunięta tak,
+# żeby kropka wypadła na środku ekranu (patrzysz przez celownik). Kropka obu jest na tej samej
+# wysokości nad podstawą (OPT_V), więc jedno przesunięcie wystarcza dla obu.
+OPTYKA_3D = ('kolimator', 'holo')
+OPT_V = 1.18
+OPT_WARIANTY = {'cel': 'cel_opt', 'cel_u': 'cel_u_opt'}
 gen.MATS.setdefault('laser_red', dict(kind='flat', base=(214, 34, 30), wear=(250, 90, 80), edge=0.0))
 PISTOLETY = {'glock', 'makarov', 'deagle', 'sw1911', 'p30'}
 MODEL_DIR = 'assets/axon/models/dodatki/'
@@ -124,8 +130,11 @@ def _kolba(g):
     return [e for e in g.els if e.name.startswith(('stock', 'butt'))]
 
 
-def zbuduj(nazwa, dodatek):
-    """Gun (gen.py) z samym dodatkiem dla broni `nazwa`, albo None, gdy dodatek tu nie ma sensu."""
+def zbuduj(nazwa, dodatek, sciskaj=1.0):
+    """Gun (gen.py) z samym dodatkiem dla broni `nazwa`, albo None, gdy dodatek tu nie ma sensu.
+
+    sciskaj: dla kolimatora i holo mnożnik wysokości nad podstawą (wersja do celowania, kompensuje
+    rozciągnięcie z display broni, żeby celownik w widoku miał właściwe proporcje)."""
     g = gen.BUILDERS[nazwa]()
     a = gen.Gun(nazwa + '_' + dodatek, g.qa)
     a.frame = g.frame
@@ -209,14 +218,15 @@ def zbuduj(nazwa, dodatek):
         _, hi = _profile(g, uc, 0.8)
         L = 1.6 if pistol else 2.4
         base = max(hi, g.sight['rear'][1] - 0.3)
-        a.b('rd_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), 0.5, 'rail')
-        a.b('rd_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.75), 0.55, 'black')
-        a.b('rd_hood_l', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (-0.55, -0.4), 'black')
-        a.b('rd_hood_r', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (0.4, 0.55), 'black')
-        a.b('rd_hood_t', (uc - L / 2, uc - L / 2 + 0.45), (base + 1.6, base + 1.8), 0.55, 'black')
-        a.b('rd_glass', (uc - L / 2 + 0.15, uc - L / 2 + 0.25), (base + 0.75, base + 1.6), 0.4, 'glass')
-        a.b('rd_dot', (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (base + 1.12, base + 1.24), 0.06, 'laser_red')
-        a.b('rd_knob', (uc + 0.1, uc + 0.6), (base + 0.4, base + 0.7), (0.55, 0.75), 'parts')
+        W = max(0.42, min(0.5, _szerokosc(g, uc, base - 1.0, base + 0.05)))    # nie szerszy niż broń
+        a.podstawa = base
+        a.b('rd_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), W - 0.05, 'rail')
+        a.b('rd_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.75), W, 'black')
+        a.b('rd_hood_l', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (-W, -W + 0.12), 'black')
+        a.b('rd_hood_r', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (W - 0.12, W), 'black')
+        a.b('rd_hood_t', (uc - L / 2, uc - L / 2 + 0.45), (base + 1.6, base + 1.8), W, 'black')
+        a.b('rd_dot', (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (base + OPT_V - 0.07, base + OPT_V + 0.07), 0.07, 'laser_red')
+        a.b('rd_knob', (uc + 0.1, uc + 0.6), (base + 0.75, base + 0.95), 0.18, 'parts')     # pokrętło na górze
     elif dodatek == 'laser':
         L = 1.4 if pistol else 2.0
         if pistol:
@@ -292,18 +302,24 @@ def zbuduj(nazwa, dodatek):
         uc = rear - 0.25 * (rear - front)
         _, hi = _profile(g, uc, 0.8)
         L = 2.2 if pistol else 3.2
-        W = 0.6 if pistol else 0.75
         base = max(hi, g.sight['rear'][1] - 0.3)
+        W = max(0.42, min(0.45 if pistol else 0.5, _szerokosc(g, uc, base - 1.0, base + 0.05)))    # nie szerszy niż broń
+        a.podstawa = base
         a.b('hl_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), W - 0.1, 'rail')
-        a.b('hl_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.85), W, 'black')
-        a.b('hl_batt', (uc + L / 2 - 1.1, uc + L / 2), (base + 0.35, base + 0.95), (W, W + 0.35), 'black')
-        a.b('hl_hood_l', (uc - L / 2, uc + 0.2), (base + 0.85, base + 2.1), (-W, -W + 0.15), 'black')
-        a.b('hl_hood_r', (uc - L / 2, uc + 0.2), (base + 0.85, base + 2.1), (W - 0.15, W), 'black')
-        a.b('hl_hood_t', (uc - L / 2, uc + 0.2), (base + 1.95, base + 2.15), W, 'black')
-        a.b('hl_glass_f', (uc - L / 2 + 0.15, uc - L / 2 + 0.25), (base + 0.85, base + 1.95), W - 0.15, 'glass')
-        a.b('hl_glass_r', (uc + 0.05, uc + 0.15), (base + 0.85, base + 1.95), W - 0.15, 'glass')
-        a.b('hl_dot', (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (base + 1.34, base + 1.46), 0.06, 'laser_red')
-        a.b('hl_btn', (uc + 0.4, uc + 0.8), (base + 0.85, base + 1.0), 0.2, 'rubber')
+        a.b('hl_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.63), W, 'black')
+        a.b('hl_batt', (uc + L / 2 - 1.1, uc + L / 2), (base + 0.63, base + 0.9), W - 0.2, 'parts')      # bateria z tyłu na górze
+        # okno na wysokości OPT_V (środek 0.63..1.73)
+        a.b('hl_hood_l', (uc - L / 2, uc + 0.2), (base + 0.63, base + 1.88), (-W, -W + 0.12), 'black')
+        a.b('hl_hood_r', (uc - L / 2, uc + 0.2), (base + 0.63, base + 1.88), (W - 0.12, W), 'black')
+        a.b('hl_hood_t', (uc - L / 2, uc + 0.2), (base + 1.73, base + 1.93), W, 'black')
+        a.b('hl_dot', (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (base + OPT_V - 0.05, base + OPT_V + 0.05), 0.05, 'laser_red')
+        # pierścień holo z małych kwadratów wokół kropki
+        rr, t = min(0.3, W - 0.24), 0.035
+        for i in range(16):
+            ang = 2 * math.pi * i / 16
+            vv, ww = base + OPT_V + rr * math.sin(ang), rr * math.cos(ang)
+            a.b('hl_ring%d' % i, (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (vv - t, vv + t), (ww - t, ww + t), 'laser_red')
+        a.b('hl_btn', (uc + 0.25, uc + 0.45), (base + 0.63, base + 0.78), 0.15, 'rubber')
     elif dodatek == 'chwyt_katowy':
         if pistol:
             return None
@@ -330,6 +346,10 @@ def zbuduj(nazwa, dodatek):
         a.b('qm_loop_d', (uf + 0.2, ub - 0.2), (v0 - 1.3, v0 - 1.1), w * 0.5, 'band')
     if not a.els:
         return None
+    if sciskaj != 1.0 and hasattr(a, 'podstawa'):
+        for e in a.els:
+            e.lo[1] = a.podstawa + (e.lo[1] - a.podstawa) * sciskaj
+            e.hi[1] = a.podstawa + (e.hi[1] - a.podstawa) * sciskaj
     return a
 
 
@@ -372,6 +392,55 @@ def _wycentrowany(model, gui_scale=None):
     return out
 
 
+PRZESUNIECIE = {}      # nazwa bazowa -> {'cel': δ, 'cel_u': δ} (bloki, do translacji display) przy optyce 3D
+_ARM_R = np.array([0.56, -0.52, -0.72])
+_CHARGED_R = rot_axis('y', 10.0)
+
+
+def _srodek(model, nazwy):
+    for e in model['elements']:
+        if str(e.get('name', '')).startswith(nazwy):
+            return (np.array(e['from'], float) + np.array(e['to'], float)) / 2
+    return None
+
+
+def _sciskanie(model, disp):
+    """Ile razy ścisnąć celownik w pionie, żeby w widoku z display miał takie proporcje jak w modelu."""
+    els = [e for e in model['elements'] if str(e.get('name', '')).startswith(('rd_hood', 'hl_hood'))]
+    if not els:
+        return 1.0
+    lo = np.min([e['from'] for e in els], 0)
+    hi = np.max([e['to'] for e in els], 0)
+    rogi = np.array([[x, y, z] for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])], float)
+    c = apply_display(rogi, disp)
+    ekran = (np.ptp(c[:, 1]) + 1e-9) / (np.ptp(c[:, 0]) + 1e-9)      # wysokość / szerokość w widoku
+    R = rot_xyz(disp.get('rotation', [0, 0, 0]))
+    # te same rogi bez skali display: proporcje samego modelu oglądanego z tego kierunku
+    c0 = ((rogi / 16.0 - 0.5)) @ R.T
+    model_r = (np.ptp(c0[:, 1]) + 1e-9) / (np.ptp(c0[:, 0]) + 1e-9)
+    return float(np.clip(model_r / ekran, 0.25, 1.0))
+
+
+def przesun(disp, p, charged):
+    """Przesunięcie translacji (bloki), po którym punkt p modelu leży na osi widoku (środek ekranu)."""
+    c = apply_display(p[None], disp)[0]
+    if charged:
+        c = _ARM_R + np.array([-0.641864, 0, 0]) + _CHARGED_R @ c
+        return _CHARGED_R.T @ np.array([-c[0], -c[1], 0.0])
+    c = _ARM_R + c
+    return np.array([-c[0], -c[1], 0.0])
+
+
+def _z_przesunieciem(wpis, delta):
+    """Kopia wpisu wariantu z przesuniętą translacją firstperson_righthand."""
+    out = json.loads(json.dumps(wpis))
+    d = out['firstperson_righthand']
+    t = np.array(d.get('translation', [0, 0, 0]), float) + 16 * np.asarray(delta)
+    assert np.all(np.abs(t) <= 80), t
+    d['translation'] = [round(float(x), 3) + 0.0 for x in t]
+    return out
+
+
 def pliki(z, warianty, bronie):
     """Pliki dodatków dla broni z gen.BUILDERS, które są na kuszy.
 
@@ -387,6 +456,7 @@ def pliki(z, warianty, bronie):
             continue
         display = json.loads(z.read(path)).get('display', {})
         w = warianty(display, nazwa)
+        modele = {}
         for dod in DODATKI:
             if dod in USUNIETE:
                 continue
@@ -398,13 +468,38 @@ def pliki(z, warianty, bronie):
             if not _w_granicach(model):
                 print('gen_dodatki: %s/%s poza granicami modelu, pomijam' % (nazwa, dod))
                 continue
+            modele[dod] = (model, img)
+        # Kolimator/holo przy celowaniu: osobny model ściśnięty w pionie (display broni rozciąga go
+        # w widoku), a cała broń przesunięta tak, żeby kropka była na środku ekranu.
+        modele_cel = {}
+        for dod in OPTYKA_3D:
+            if dod not in modele:
+                continue
+            k = _sciskanie(modele[dod][0], w['cel_u']['firstperson_righthand'])
+            a = zbuduj(nazwa, dod, k)
+            ref = 'qualityarmory:axon/dod_%s_%s_cel' % (nazwa, dod)
+            mc, img, _, _ = gen.build_model(a, ref, display)
+            if _w_granicach(mc):
+                modele_cel[dod] = (mc, img)
+        if modele_cel:
+            kropka = _srodek(next(iter(modele_cel.values()))[0], ('rd_dot', 'hl_dot'))
+            PRZESUNIECIE[nazwa] = {v: przesun(w[v]['firstperson_righthand'], kropka, v == 'cel') for v in OPT_WARIANTY}
+            w.update({OPT_WARIANTY[v]: _z_przesunieciem(w[v], PRZESUNIECIE[nazwa][v]) for v in OPT_WARIANTY})
+        for dod, (mc, img) in modele_cel.items():
+            mc['credit'] = 'AXON - gen_dodatki.py'
+            out[MODEL_DIR + '%s_%s_cel.json' % (nazwa, dod)] = (json.dumps(mc, indent=1) + '\n').encode()
+            out[TEX_DIR + 'dod_%s_%s_cel.png' % (nazwa, dod)] = _png(img)
+        for dod, (model, img) in modele.items():
             model['credit'] = 'AXON - gen_dodatki.py'
             out[MODEL_DIR + '%s_%s.json' % (nazwa, dod)] = (json.dumps(model, indent=1) + '\n').encode()
             out[TEX_DIR + 'dod_%s_%s.png' % (nazwa, dod)] = _png(img)
             for wariant, disp in w.items():
                 if dod in BEZ_CELOWANIA and wariant.startswith('cel'):
-                    continue          # celowanie idzie przez przyrządy broni; luneta zasłaniałaby widok
-                child = {'parent': 'axon:dodatki/%s_%s' % (nazwa, dod), 'display': disp}
+                    continue          # celowanie idzie przez widok lunety
+                rodzic = 'axon:dodatki/%s_%s' % (nazwa, dod)
+                if dod in modele_cel and wariant in OPT_WARIANTY.values():
+                    rodzic += '_cel'
+                child = {'parent': rodzic, 'display': disp}
                 out[MODEL_DIR + '%s/%s_%s.json' % (wariant, nazwa, dod)] = (json.dumps(child, indent=1) + '\n').encode()
             dostepne[(nazwa, dod)] = True
             if nazwa == PRZEDMIOT or ((PRZEDMIOT, dod) not in dostepne
