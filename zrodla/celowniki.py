@@ -42,16 +42,30 @@ ARM_R = np.array([0.56, -0.52, -0.72])
 CHARGED_T = np.array([-0.641864, 0.0, 0.0])
 CHARGED_R = rot_axis('y', 10.0)
 
-CZARNY = [0, 0, 4, 16]
-OBUDOWA = [4, 0, 8, 16]
-CZERWONY = [8, 0, 12, 16]
-SZYBKA = [12, 0, 16, 16]
+# tekstura 8×4: jeden kolor na kolumnę (uv w jednostkach 0–16, po 2 na kolumnę)
+KOLORY = [(10, 10, 12, 255),       # 0 czerń (osłona, siatka)
+          (46, 48, 53, 255),       # 1 obudowa
+          (255, 40, 30, 255),      # 2 czerwień (kropka)
+          (120, 175, 215, 46),     # 3 szybka
+          (18, 19, 22, 255),       # 4 tubus przy oku
+          (34, 36, 41, 255),       # 5 tubus w środku
+          (58, 61, 68, 255),       # 6 tubus przy soczewce
+          (96, 100, 108, 255),     # 7 obręcz soczewki
+          ]
+
+
+def _uv(i):
+    return [2 * i, 0, 2 * i + 2, 16]
+
+
+CZARNY, OBUDOWA, CZERWONY, SZYBKA = _uv(0), _uv(1), _uv(2), _uv(3)
+TUBUS = [_uv(4), _uv(5), _uv(6)]
+OBRECZ = _uv(7)
 
 
 def _tekstura():
-    kolory = [(10, 10, 12, 255), (46, 48, 53, 255), (255, 40, 30, 255), (120, 175, 215, 46)]
-    img = Image.new('RGBA', (4, 4))
-    for x, c in enumerate(kolory):
+    img = Image.new('RGBA', (len(KOLORY), 4))
+    for x, c in enumerate(KOLORY):
         for y in range(4):
             img.putpixel((x, y), c)
     buf = io.BytesIO()
@@ -63,6 +77,12 @@ def _box(x0, x1, y0, y1, uv, z0=Z0, z1=Z1):
     face = {'uv': uv, 'texture': '#t'}
     return {'from': [round(C + x0, 4), round(C + y0, 4), z0], 'to': [round(C + x1, 4), round(C + y1, 4), z1],
             'shade': False, 'faces': {k: dict(face) for k in ('north', 'south', 'east', 'west', 'up', 'down')}}
+
+
+# Luneta 3D: osłona oka z oknem, za nią krótki tubus (w perspektywie widać jego ścianki, ciemne przy oku
+# i jaśniejsze w głębi), obręcz soczewki z lekko przyciemnionym szkłem i siatka w głębi, na soczewce.
+TUBUS_DL = 2.6                  # długość tubusu w jednostkach modelu (soczewka ~72% wysokości ekranu)
+TUBUS_ZEW = 2.2                 # grubość ścianki tubusu (poza oknem, i tak zasłonięta osłoną)
 
 
 def _luneta():
@@ -79,18 +99,26 @@ def _luneta():
         els.append(_box(half, Z, y0, y1, CZARNY))
     els.append(_box(-Z, Z, R, Z, CZARNY))
     els.append(_box(-Z, Z, -Z, -R, CZARNY))
-    # siatka: grube ramiona od brzegu okna do 40% promienia, cienki krzyż w środku z małą przerwą
-    gr, cn, gap = 0.09, 0.022, 0.12
-    w = 0.4 * R
-    z = (Z0 - 0.02, Z0)
-    els += [_box(-gr, gr, w, R, CZARNY, *z), _box(-gr, gr, -R, -w, CZARNY, *z),
-            _box(-R, -w, -gr, gr, CZARNY, *z), _box(w, R, -gr, gr, CZARNY, *z),
+    # tubus: plastry od oka w głąb, coraz jaśniejsze
+    zs = [Z0 - TUBUS_DL * k / 6 for k in range(7)]
+    for k in range(6):
+        els += _pierscien(R, R + TUBUS_ZEW, TUBUS[min(2, k // 2)], round(zs[k + 1], 4), round(zs[k], 4), krok=0.4)
+    zf = round(zs[-1], 4)
+    # obręcz soczewki i szkło
+    rl = R - 0.45
+    els += _pierscien(rl, R + 0.05, OBRECZ, zf - 0.15, zf + 0.05, krok=0.3)
+    els += _pierscien(0, rl, SZYBKA, zf - 0.3, zf - 0.28, krok=0.4)
+    # siatka na soczewce: grube ramiona od brzegu do 40% promienia, cienki krzyż w środku z małą przerwą
+    gr, cn, gap = 0.08, 0.02, 0.11
+    w = 0.4 * rl
+    z = (zf - 0.25, zf - 0.23)
+    els += [_box(-gr, gr, w, rl, CZARNY, *z), _box(-gr, gr, -rl, -w, CZARNY, *z),
+            _box(-rl, -w, -gr, gr, CZARNY, *z), _box(w, rl, -gr, gr, CZARNY, *z),
             _box(-cn, cn, gap, w, CZARNY, *z), _box(-cn, cn, -w, -gap, CZARNY, *z),
             _box(-w, -gap, -cn, cn, CZARNY, *z), _box(gap, w, -cn, cn, CZARNY, *z)]
-    # kreski odległości na dolnym ramieniu
     for k in (1, 2, 3):
         y = -gap - k * (w - gap) / 4
-        els.append(_box(-0.12, 0.12, y - cn, y + cn, CZARNY, *z))
+        els.append(_box(-0.11, 0.11, y - cn, y + cn, CZARNY, *z))
     return els
 
 
