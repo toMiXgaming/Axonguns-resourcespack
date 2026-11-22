@@ -4,7 +4,7 @@
 Zamiast patrzeć przez model lunety (rura, która zasłania pół ekranu) przy celowaniu klient rysuje płaską
 nakładkę tuż przed kamerą, zawsze na środku ekranu, niezależnie od broni:
 - luneta: płaska karta z teksturą w wysokiej rozdzielczości (okular.py): gruby gumowy okular z bliska,
-  korpus z pokrętłami, okno ze szkłem i siatką mil-dot; poza rysunkiem przezroczysta, dookoła widać świat,
+  korpus z nitami, okno ze szkłem i siatką mil-dot; poza rysunkiem przezroczysta, dookoła widać świat,
 - kolimator: sama czerwona kropka na środku, broń i przyrządy widać dalej,
 - holo: czerwony pierścień z kropką.
 
