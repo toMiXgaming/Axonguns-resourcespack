@@ -69,6 +69,8 @@ Przy celowaniu (`zrodla/celowniki.py`) celowniki nie są już modelem na broni, 
 - luneta (flaga lunety, a w AWP i Dragunovie zawsze): czarna osłona z dużym okrągłym oknem (85% wysokości ekranu) i cienką siatką, broni wtedy nie widać. Zastępuje dawną rurę AWP, przez którą było widać tylko mały kwadrat,
 - kolimator: okrągła obudowa (jak Aimpoint) z lekko przyciemnioną szybką i czerwoną kropką, holo: prostokątna rama z daszkiem (jak EOTech), szybka, czerwony pierścień z kropką; broń pod spodem widać dalej.
 
+Z założonym celownikiem (kolimator, holo, luneta) broń ma wariant bez muszki i szczerbinki (`axon:bron/<wariant>_bez/<broń>`, elementy `fs_*`, `fsb_*`, `rs_*`, `buis_*` bez podstaw), więc nie widać dwóch celowników naraz.
+
 Przedmiot w pierwszej osobie ma stały FOV 70, więc nakładka zajmuje zawsze to samo miejsce, a przybliżenie robi plugin. Podgląd: `podglady/celowniki.png`, `podglady/dodatki-nowe.png`.
 
 ## Wersje Minecrafta (1.21–1.21.11)

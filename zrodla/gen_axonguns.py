@@ -183,12 +183,41 @@ def _flaga(dod, on_true, on_false):
             'on_true': on_true, 'on_false': on_false}
 
 
+# Przyrządy (muszka i szczerbinka) chowane, gdy na broni jest celownik: elementy fs_*, fsb_*, rs_*, buis_*
+# bez podstaw i obejm, które są częścią lufy albo komory.
+PRZYRZADY = ('fs_', 'fsb_', 'rs_', 'buis_')
+ZOSTAJA = ('_base', '_collar', '_block', '_lug', '_swivel', '_tower_lo')
+OPTYKA = ('kolimator', 'holo', 'luneta')
+BEZ_PRZYRZADOW = set()       # nazwy modeli broni, które mają wariant bez przyrządów (wypełnia pliki())
+
+
+def bez_przyrzadow(model):
+    """Model broni bez muszki i szczerbinki albo None, gdy nie ma czego chować."""
+    els = [e for e in model.get('elements', [])
+           if not (str(e.get('name', '')).startswith(PRZYRZADY) and not str(e.get('name', '')).endswith(ZOSTAJA))]
+    if len(els) == len(model.get('elements', [])):
+        return None
+    m = dict(model)
+    m['elements'] = els
+    return m
+
+
+def _bron(wariant, name):
+    model = {'type': 'minecraft:model', 'model': 'axon:bron/%s/%s' % (wariant, name)}
+    if name not in BEZ_PRZYRZADOW:
+        return model
+    bez = {'type': 'minecraft:model', 'model': 'axon:bron/%s_bez/%s' % (wariant, name)}
+    for dod in OPTYKA:
+        model = _flaga(dod, bez, model)
+    return model
+
+
 def _dispatch(guns, wariant, dostepne=None):
     entries = []
     cel = wariant.startswith('cel')
     for cmd, ref in guns:
         name = ref.split('/')[-1]
-        model = {'type': 'minecraft:model', 'model': 'axon:bron/%s/%s' % (wariant, name)}
+        model = _bron(wariant, name)
         dod = gen_dodatki.nakladki(name, wariant, dostepne or {})
         if cel:
             # kropka kolimatora i pierścień holo na środku ekranu, broń widać dalej
@@ -296,6 +325,16 @@ def pliki(z):
         for wariant, disp in w.items():
             model = {'parent': ref, 'display': disp}
             out[PREFIX + '%s/%s.json' % (wariant, name)] = (json.dumps(model, indent=1) + '\n').encode()
+        try:
+            bez = bez_przyrzadow(_model(z, ref))
+        except (KeyError, ValueError):
+            bez = None
+        if bez is not None:
+            BEZ_PRZYRZADOW.add(name)
+            out[PREFIX + '_bez/%s.json' % name] = (json.dumps(bez) + '\n').encode()
+            for wariant, disp in w.items():
+                child = {'parent': 'axon:bron/_bez/%s' % name, 'display': disp}
+                out[PREFIX + '%s_bez/%s.json' % (wariant, name)] = (json.dumps(child, indent=1) + '\n').encode()
     dod, dostepne = gen_dodatki.pliki(z, warianty, guns)
     out.update(dod)
     out.update(celowniki.pliki())
