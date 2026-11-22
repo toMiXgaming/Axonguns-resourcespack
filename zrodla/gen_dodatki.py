@@ -29,14 +29,17 @@ import gen  # noqa: E402
 from render import rot_xyz  # noqa: E402
 
 DODATKI = ['tlumik', 'kompensator', 'chwyt', 'latarka', 'luneta', 'kolimator', 'laser', 'dwojnog', 'magazynek',
-           'kolba']
+           'kolba', 'lufa_dluga', 'holo', 'chwyt_katowy', 'magazynek_szybki']
+# laser został usunięty z AxonGuns; zostaje na liście tylko po to, żeby nie przesunąć numerów flag
+USUNIETE = {'laser'}
 # flagi custom_model_data ustawiane przez AxonGuns (Attachment.LOOKS w tej samej kolejności, od flagi 2)
 FLAG = {d: i + 2 for i, d in enumerate(DODATKI)}
 NAZWY = {'tlumik': 'Tłumik', 'kompensator': 'Kompensator', 'chwyt': 'Chwyt przedni',
          'latarka': 'Latarka taktyczna', 'luneta': 'Luneta 4x', 'kolimator': 'Kolimator',
          'laser': 'Celownik laserowy', 'dwojnog': 'Dwójnóg', 'magazynek': 'Powiększony magazynek',
-         'kolba': 'Nakładka na kolbę'}
-BEZ_CELOWANIA = {'luneta', 'kolimator'}   # w widoku przez przyrządy zasłaniałyby cel
+         'kolba': 'Nakładka na kolbę', 'lufa_dluga': 'Przedłużona lufa', 'holo': 'Celownik holograficzny',
+         'chwyt_katowy': 'Chwyt kątowy', 'magazynek_szybki': 'Szybki magazynek'}
+BEZ_CELOWANIA = {'luneta', 'kolimator', 'holo'}   # przy celowaniu zamiast modelu jest widok celownika (celowniki.py)
 gen.MATS.setdefault('laser_red', dict(kind='flat', base=(214, 34, 30), wear=(250, 90, 80), edge=0.0))
 PISTOLETY = {'glock', 'makarov', 'deagle', 'sw1911', 'p30'}
 MODEL_DIR = 'assets/axon/models/dodatki/'
@@ -272,6 +275,59 @@ def zbuduj(nazwa, dodatek):
         a.b('ck_strap_f', (ue - 4.6, ue - 4.2), (top - 0.4, top + 0.6), w + 0.08, 'band')
         a.b('ck_strap_r', (ue - 1.8, ue - 1.4), (top - 0.4, top + 0.6), w + 0.08, 'band')
         a.b('ck_pad', (ue - 0.05, ue + 0.55), (bot - 0.1, top + 0.1), w + 0.1, 'rubber')
+    elif dodatek == 'lufa_dluga':
+        if pistol:
+            return None
+        L = 5.0
+        r = max(0.3, rb * 0.8)
+        a.cyl('ld_barrel', (u0 - L, u0 + 0.4), 0.0, r, 'black')
+        a.cyl('ld_collar', (u0 - 0.2, u0 + 0.6), 0.0, r + 0.18, 'parts')
+        a.cyl('ld_crown', (u0 - L - 0.25, u0 - L + 0.05), 0.0, r + 0.12, 'parts')
+        a.cyl('ld_bore', (u0 - L - 0.3, u0 - L - 0.2), 0.0, r * 0.45, 'black')
+        a.b('ld_sight', (u0 - L + 0.3, u0 - L + 0.75), (r - 0.05, r + 0.55), 0.12, 'black')
+    elif dodatek == 'holo':
+        if _ma_lunete(g) or not g.sight:
+            return None
+        rear, front = g.sight['rear'][0], g.sight['front'][0]
+        uc = rear - 0.25 * (rear - front)
+        _, hi = _profile(g, uc, 0.8)
+        L = 2.2 if pistol else 3.2
+        W = 0.6 if pistol else 0.75
+        base = max(hi, g.sight['rear'][1] - 0.3)
+        a.b('hl_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), W - 0.1, 'rail')
+        a.b('hl_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.85), W, 'black')
+        a.b('hl_batt', (uc + L / 2 - 1.1, uc + L / 2), (base + 0.35, base + 0.95), (W, W + 0.35), 'black')
+        a.b('hl_hood_l', (uc - L / 2, uc + 0.2), (base + 0.85, base + 2.1), (-W, -W + 0.15), 'black')
+        a.b('hl_hood_r', (uc - L / 2, uc + 0.2), (base + 0.85, base + 2.1), (W - 0.15, W), 'black')
+        a.b('hl_hood_t', (uc - L / 2, uc + 0.2), (base + 1.95, base + 2.15), W, 'black')
+        a.b('hl_glass_f', (uc - L / 2 + 0.15, uc - L / 2 + 0.25), (base + 0.85, base + 1.95), W - 0.15, 'glass')
+        a.b('hl_glass_r', (uc + 0.05, uc + 0.15), (base + 0.85, base + 1.95), W - 0.15, 'glass')
+        a.b('hl_dot', (uc - L / 2 + 0.1, uc - L / 2 + 0.14), (base + 1.34, base + 1.46), 0.06, 'laser_red')
+        a.b('hl_btn', (uc + 0.4, uc + 0.8), (base + 0.85, base + 1.0), 0.2, 'rubber')
+    elif dodatek == 'chwyt_katowy':
+        if pistol:
+            return None
+        lf, lb = _loze(g, nazwa)
+        uc = lf + 0.5 * (lb - lf)
+        lo, _ = _profile(g, uc)
+        a.b('afg_mount', (uc - 1.8, uc + 1.8), (lo - 0.3, lo + 0.05), 0.5, 'rail')
+        # pochylona płytka: z przodu przy łożu, z tyłu niżej (pod kciuk), obrót 22,5° wokół osi w
+        rot = (22.5, (uc, lo - 0.3))
+        a.b('afg_body', (uc - 1.9, uc + 1.9), (lo - 1.5, lo - 0.3), 0.48, 'polymer', rot=rot)
+        a.b('afg_lip', (uc + 1.5, uc + 2.0), (lo - 2.3, lo - 0.6), 0.48, 'polymer', rot=rot)
+        a.b('afg_grip', (uc - 1.6, uc + 1.4), (lo - 1.7, lo - 1.5), 0.5, 'rubber', rot=rot)
+    elif dodatek == 'magazynek_szybki':
+        mag = _magazynek(g)
+        if not mag or any(e.name.startswith('drum') for e in g.els):
+            return None
+        low = min(mag, key=lambda e: e.lo[1])
+        v0 = low.lo[1]
+        w = max(abs(low.lo[0]), abs(low.hi[0]))
+        uf, ub = low.lo[2], low.hi[2]
+        a.b('qm_plate', (uf - 0.05, ub + 0.05), (v0 - 0.2, v0 + 0.02), w + 0.06, 'rubber')
+        a.b('qm_loop_f', (uf + 0.2, uf + 0.45), (v0 - 1.1, v0 - 0.2), w * 0.5, 'band')
+        a.b('qm_loop_b', (ub - 0.45, ub - 0.2), (v0 - 1.1, v0 - 0.2), w * 0.5, 'band')
+        a.b('qm_loop_d', (uf + 0.2, ub - 0.2), (v0 - 1.3, v0 - 1.1), w * 0.5, 'band')
     if not a.els:
         return None
     return a
@@ -332,6 +388,8 @@ def pliki(z, warianty, bronie):
         display = json.loads(z.read(path)).get('display', {})
         w = warianty(display, nazwa)
         for dod in DODATKI:
+            if dod in USUNIETE:
+                continue
             a = zbuduj(nazwa, dod)
             if a is None:
                 continue
@@ -364,7 +422,7 @@ def nakladki(nazwa_broni, wariant, dostepne):
     baza = nazwa_broni.split('_')[0]
     out = []
     for dod in DODATKI:
-        if not dostepne.get((baza, dod)):
+        if dod in USUNIETE or not dostepne.get((baza, dod)):
             continue
         if dod in BEZ_CELOWANIA and wariant.startswith('cel'):
             continue

@@ -61,6 +61,18 @@ Plugin AxonGuns daje broni `item_model` = `axon:bron` i `custom_model_data` = nu
 
 Warianty to małe modele z `parent` = model broni i samym `display`. Generuje je `zrodla/gen_axonguns.py` dla każdej broni `qualityarmory:gun/*` z `crossbow.json` (wołany z `build_pack.py` i `buduj_1_21_11.py`; sam z siebie łata podane zipy). Na 1.21–1.21.3 jest tylko model biodra (nakładka `axon_1_21_0`). Podgląd: `zrodla/preview_axonguns.py`, `podglady/axonguns-poza-celowanie.png`.
 
+### Dodatki i widok przez celownik
+
+Dodatki na broni (`zrodla/gen_dodatki.py`) włącza flaga `custom_model_data` od 2, w kolejności `Attachment.LOOKS` z AxonGuns: tłumik, kompensator, chwyt, latarka, luneta, kolimator, (laser, usunięty, flaga zostaje wolna), dwójnóg, powiększony magazynek, kolba, przedłużona lufa, celownik holograficzny, chwyt kątowy, szybki magazynek (pętla pod magazynkiem).
+
+Przy celowaniu (`zrodla/celowniki.py`) celowniki nie są już modelem na broni, tylko płaską nakładką tuż przed okiem, zawsze na środku ekranu:
+- luneta (flaga lunety, a w AWP i Dragunovie zawsze): jedna płaska karta 2:1 z teksturą 1536×768 rysowaną w `zrodla/okular.py` (gruby gumowy okular z bliska z cieniem, korpus lunety z nitami, bez pokręteł, okno ze szkłem przyciemnionym przy brzegu, odblask, siatka mil-dot z grubymi ramionami i czerwonym punktem). Poza rysunkiem tekstura jest przezroczysta, więc dookoła widać świat; broni wtedy nie widać. Zastępuje dawną rurę AWP, przez którą było widać tylko mały kwadrat,
+- kolimator: okrągła obudowa (jak Aimpoint) z lekko przyciemnioną szybką i czerwoną kropką, holo: prostokątna rama z daszkiem (jak EOTech), szybka, czerwony pierścień z kropką; broń pod spodem widać dalej.
+
+Z założonym celownikiem (kolimator, holo, luneta) broń ma wariant bez muszki i szczerbinki (`axon:bron/<wariant>_bez/<broń>`, elementy `fs_*`, `fsb_*`, `rs_*`, `buis_*` bez podstaw), więc nie widać dwóch celowników naraz.
+
+Przedmiot w pierwszej osobie ma stały FOV 70, więc nakładka zajmuje zawsze to samo miejsce, a przybliżenie robi plugin. Podgląd: `podglady/celowniki.png`, `podglady/dodatki-nowe.png`.
+
 ## Wersje Minecrafta (1.21–1.21.11)
 
 Jedna paczka działa na wszystkich wersjach 1.21.x. `pack.mcmeta` deklaruje formaty 34–75 w obu zapisach (stary `pack_format` + `supported_formats` i nowy `min_format`/`max_format` od 1.21.9), a różnice między wersjami załatwiają nakładki (`overlays`), które gra wczytuje tylko na pasujących wersjach:
