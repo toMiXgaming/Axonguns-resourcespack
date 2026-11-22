@@ -20,9 +20,9 @@ import json
 
 import numpy as np
 
-WYGLADY = {'lufa': ('tlumik', 'kompensator'), 'luneta': ('luneta', 'kolimator'), 'chwyt': ('chwyt',),
-           'latarka': ('latarka',), 'laser': ('laser',), 'magazynek': ('magazynek',), 'kolba': ('kolba',),
-           'dwojnog': ('dwojnog',)}
+WYGLADY = {'lufa': ('tlumik', 'kompensator', 'lufa_dluga'), 'luneta': ('luneta', 'kolimator', 'holo'),
+           'chwyt': ('chwyt', 'chwyt_katowy'), 'latarka': ('latarka',), 'magazynek': ('magazynek', 'magazynek_szybki'),
+           'kolba': ('kolba',), 'dwojnog': ('dwojnog',)}
 PLIK = 'axonguns_menu.json'
 
 

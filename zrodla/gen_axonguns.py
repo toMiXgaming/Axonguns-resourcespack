@@ -33,6 +33,7 @@ sys.path.insert(0, HERE)
 from render import rot_axis, rot_xyz, arm_pose_world, CROSSBOW_R  # noqa: E402
 import gen_dodatki  # noqa: E402
 import gen_menu_akcesoriow  # noqa: E402
+import celowniki  # noqa: E402
 
 ITEM = 'assets/axon/items/bron.json'
 CROSSBOW = 'assets/minecraft/items/crossbow.json'
@@ -177,14 +178,29 @@ def bronie(z):
     return out
 
 
+def _flaga(dod, on_true, on_false):
+    return {'type': 'minecraft:condition', 'property': 'minecraft:custom_model_data', 'index': gen_dodatki.FLAG[dod],
+            'on_true': on_true, 'on_false': on_false}
+
+
 def _dispatch(guns, wariant, dostepne=None):
     entries = []
+    cel = wariant.startswith('cel')
     for cmd, ref in guns:
         name = ref.split('/')[-1]
         model = {'type': 'minecraft:model', 'model': 'axon:bron/%s/%s' % (wariant, name)}
         dod = gen_dodatki.nakladki(name, wariant, dostepne or {})
+        if cel:
+            # kropka kolimatora i pierścień holo na środku ekranu, broń widać dalej
+            empty = {'type': 'minecraft:empty'}
+            dod = dod + [_flaga(r, {'type': 'minecraft:model', 'model': celowniki.ref(r, wariant)}, empty)
+                         for r in ('kolimator', 'holo')]
         if dod:
             model = {'type': 'minecraft:composite', 'models': [model] + dod}
+        if cel:
+            # luneta: sama nakładka lunety zamiast broni (AWP i Dragunov zawsze, mają lunetę w modelu)
+            scope = {'type': 'minecraft:model', 'model': celowniki.ref('luneta', wariant)}
+            model = scope if name.split('_')[0] in SCOPES else _flaga('luneta', scope, model)
         entries.append({'threshold': OFFSET + cmd, 'model': model})
     return {'type': 'minecraft:range_dispatch', 'property': 'minecraft:custom_model_data', 'index': 0,
             'fallback': FALLBACK, 'entries': entries}
@@ -215,7 +231,7 @@ def _bbox(model):
 
 # Luneta przy celowaniu (wariant „cel” to pełny model zamiast samego display):
 # czarna osłona wokół okularu zasłania świat na rogach ekranu, a krzyż jest cienki i bez środka.
-SCOPES = {'awp'}
+SCOPES = {'awp', 'dragunov'}       # przy celowaniu nakładka z celowniki.py (luneta() zostaje dla podglądów)
 RET_HALF = 0.008      # połowa grubości kreski (jednostki modelu; luneta AWP ma skalę 2,2)
 RET_GAP = 0.12        # pusty środek krzyża (od środka do początku kreski)
 PLATE = 9.0           # zasięg osłony od osi lunety
@@ -279,14 +295,10 @@ def pliki(z):
         w = warianty(display, name)
         for wariant, disp in w.items():
             model = {'parent': ref, 'display': disp}
-            if wariant in ('cel', 'cel_u') and name.split('_')[0] in SCOPES:
-                full = luneta(_model(z, ref))
-                if full is not None:
-                    full['display'] = dict(display, **disp)
-                    model = full
             out[PREFIX + '%s/%s.json' % (wariant, name)] = (json.dumps(model, indent=1) + '\n').encode()
     dod, dostepne = gen_dodatki.pliki(z, warianty, guns)
     out.update(dod)
+    out.update(celowniki.pliki())
     out[ITEM] = (json.dumps(definicja(guns, dostepne), indent=1) + '\n').encode()
     # menu akcesoriów (AxonGuns + okno AxonItems): środek, długość i kotwice miejsc każdej broni
     modele = {}
@@ -331,7 +343,7 @@ def patch(path):
     tmp = path + '.tmp'
     with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
         for i in zin.infolist():
-            if i.filename in files or i.filename.startswith((PREFIX, gen_dodatki.MODEL_DIR) + STARE):
+            if i.filename in files or i.filename.startswith((PREFIX, gen_dodatki.MODEL_DIR, celowniki.MODEL_DIR) + STARE):
                 continue
             zout.writestr(i, zin.read(i.filename))
         for fn, data in sorted(files.items()):
