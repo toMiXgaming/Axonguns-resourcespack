@@ -1767,7 +1767,7 @@ vec4 axonFlash() {
     float core = clamp((p - 0.6) / 0.4, 0.0, 1.0);          // pełna biel na początku
     float haze = p * p * (0.35 + 0.65 * s);                  // poświata po bieli
     float edge = 1.0 - (1.0 - core) * 0.6 * smoothstep(0.25, 1.15, d);   // winieta: brzegi wracają pierwsze
-    float flick = s > 0.75 ? 1.0 : 0.94 + 0.06 * sin(GameTime * 24000.0 * 2.7 + d * 11.0);
+    float flick = s > 0.75 ? 1.0 : 0.94 + 0.06 * sin(GameTime * 24000.0 * 2.7);
     vec3 col = mix(vec3(1.0, 0.97, 0.90), vec3(1.0), core);
     return vec4(col, clamp(core + (1.0 - core) * haze, 0.0, 1.0) * edge * flick);
 }

@@ -908,7 +908,7 @@ bool axonFullVertex() {
 
 // Błysk flashbanga (AxonGuns): znak czcionki axon:blysk rozciągnięty na cały ekran.
 // Plugin pokazuje go jako tytuł, więc Color.a to zanikanie tytułu (1 = pełny błysk, 0 = koniec),
-// a siłę błysku niesie pierwszy piksel glifu w atlasie (alfa 240-247 obok alfy 239).
+// a siłę błysku niosą rogi glifu w atlasie (alfa 240-247 obok alfy 239).
 bool axonFlashVertex() {
     if (ProjMat[2][3] != 0.0) {
         return false;
@@ -918,7 +918,8 @@ bool axonFlashVertex() {
     vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
     ivec2 tp = ivec2(floor(UV0 * atlas - cv + 0.5));
     int a0 = int(floor(texelFetch(Sampler0, tp, 0).a * 255.0 + 0.5));
-    int a1 = int(floor(texelFetch(Sampler0, tp + ivec2(1, 0), 0).a * 255.0 + 0.5));
+    // znacznik jest w każdym rogu glifu: piksel w rogu i jego sąsiad w stronę środka
+    int a1 = int(floor(texelFetch(Sampler0, tp + ivec2(vc == 2 || vc == 3 ? -1 : 1, 0), 0).a * 255.0 + 0.5));
     if (a1 != 239 || a0 < 240 || a0 > 247) {
         return false;
     }
