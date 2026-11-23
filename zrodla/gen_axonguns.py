@@ -325,18 +325,31 @@ WYBUCHOWE = {'granat': 'grenade', 'granat_zapalajacy': 'incendarygrenade', 'molo
              'granat_dymny': 'smokegrenade', 'flashbang': 'flashbang', 'c4': 'c4', 'mina': 'proxymine'}
 
 
+BLYSK_STOPNIE = 8   # ile stopni siły błysku niosą znaki czcionki axon:blysk
+
+
 def wybuchowe():
     out = {'assets/axon/items/wybuchowy_%s.json' % i: (json.dumps(
         {'model': {'type': 'minecraft:model', 'model': 'qualityarmory:misc/' + m}}, indent=1) + '\n').encode()
         for i, m in WYBUCHOWE.items()}
-    # błysk flashbanga: biały znak \ue100 czcionki axon:blysk na cały ekran (tytuł, AxonGuns Explosives.flash)
+    # Błysk flashbanga: biały znak czcionki axon:blysk na cały ekran (tytuł, AxonGuns Explosives.flash).
+    # 8 znaków \ue100-\ue107 to siła błysku. Bez shaderów każdy z nich jest po prostu bielą, a shader
+    # rendertype_text (axonFlashVertex) czyta siłę z alfy rogów glifu: 240 + siła, obok 239.
     import io
     from PIL import Image
+    img = Image.new('RGBA', (64 * BLYSK_STOPNIE, 16), (255, 255, 255, 255))
+    for k in range(BLYSK_STOPNIE):
+        # każdy róg glifu: piksel w rogu = 240 + siła, sąsiad w stronę środka = 239 (wierzchołek czyta swój róg)
+        for x, dx in ((64 * k, 1), (64 * k + 63, -1)):
+            for y in (0, 15):
+                img.putpixel((x, y), (255, 255, 255, 240 + k))
+                img.putpixel((x + dx, y), (255, 255, 255, 239))
     buf = io.BytesIO()
-    Image.new('RGBA', (64, 16), (255, 255, 255, 255)).save(buf, 'PNG')
+    img.save(buf, 'PNG')
     out['assets/axon/textures/font/blysk.png'] = buf.getvalue()
+    znaki = ''.join(chr(0xe100 + k) for k in range(BLYSK_STOPNIE))
     out['assets/axon/font/blysk.json'] = (json.dumps({'providers': [
-        {'type': 'bitmap', 'file': 'axon:font/blysk.png', 'ascent': 128, 'height': 256, 'chars': ['\ue100']}]},
+        {'type': 'bitmap', 'file': 'axon:font/blysk.png', 'ascent': 128, 'height': 256, 'chars': [znaki]}]},
         indent=1) + '\n').encode()
     return out
 

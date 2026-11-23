@@ -559,7 +559,7 @@ Dziesiąty model to ładunek `c4` (trzy kostki w oliwkowej folii, taśma, zegar 
 
 ### Materiały wybuchowe AxonGuns (`axon:wybuchowy_<id>`)
 
-`gen_axonguns.py` (`WYBUCHOWE`) dopisuje definicje przedmiotów `assets/axon/items/wybuchowy_<id>.json` dla `wybuchowe.yml` z AxonGuns. Granat to `grenade`, granat zapalający `incendarygrenade`, mołotow `molotov`, granat dymny `smokegrenade`, flashbang `flashbang`, C4 `c4`, a mina `proxymine`. Do tego czcionka `axon:blysk` z jednym białym znakiem `\ue100` (64×16 px skalowane do wysokości 256). Flashbang wysyła go jako tytuł, więc ekran robi się biały i powoli gaśnie.
+`gen_axonguns.py` (`WYBUCHOWE`) dopisuje definicje przedmiotów `assets/axon/items/wybuchowy_<id>.json` dla `wybuchowe.yml` z AxonGuns. Granat to `grenade`, granat zapalający `incendarygrenade`, mołotow `molotov`, granat dymny `smokegrenade`, flashbang `flashbang`, C4 `c4`, a mina `proxymine`. Do tego czcionka `axon:blysk` z ośmioma białymi znakami `\ue100`-`\ue107` (po 64×16 px, skalowane do wysokości 256), gdzie kolejny znak to mocniejszy błysk. Flashbang wysyła znak jako tytuł: bez shaderów ekran robi się biały i gaśnie, a z shaderami `axonFlashVertex`/`axonFlash` w `rendertype_text` rozciągają go na cały ekran i rysują czystą biel, potem ciepłą poświatę i winietę, która gaśnie od brzegów. Siłę błysku shader czyta z alfy pierwszych dwóch pikseli glifu (240 + siła, obok 239), więc bez shaderów nic nie widać.
 
 Granatnik M79 (`gen.py: build_m79`, custom_model_data 92 na kuszy, poza jak w Remingtonie) to gruba lufa 40 mm z otworem, składany celownik, drewniane łoże i kolba z gumową stopką. Dopisuje go `dodaj_bronie_tanie.py` razem z tanimi broniami.
 

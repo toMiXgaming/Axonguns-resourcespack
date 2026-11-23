@@ -1753,7 +1753,30 @@ vec4 axonSharp4(vec2 uv) {
 
 #moj_import <minecraft:axon_gs_ui_frag.glsl>
 
+// Błysk flashbanga na cały ekran (axonHud 23, dane z axonFlashVertex).
+// p = zanikanie tytułu: najpierw czysta biel, potem ciepła poświata, a brzegi ekranu gasną pierwsze.
+vec4 axonFlash() {
+    float s = clamp(axonHudExtra.x, 0.0, 1.0);
+    float p = clamp(axonHudExtra.y, 0.0, 1.0);
+    vec2 uv = axonHudLocal - 0.5;
+    float d = clamp(length(uv * vec2(ScreenSize.x / max(ScreenSize.y, 1.0), 1.0)) / 0.75, 0.0, 1.6);
+    float core = clamp((p - 0.6) / 0.4, 0.0, 1.0);          // pełna biel na początku
+    float haze = p * p * (0.35 + 0.65 * s);                  // poświata po bieli
+    float edge = 1.0 - (1.0 - core) * 0.6 * smoothstep(0.25, 1.15, d);   // winieta: brzegi wracają pierwsze
+    float flick = s > 0.75 ? 1.0 : 0.94 + 0.06 * sin(GameTime * 24000.0 * 2.7);
+    vec3 col = mix(vec3(1.0, 0.97, 0.90), vec3(1.0), core);
+    return vec4(col, clamp(core + (1.0 - core) * haze, 0.0, 1.0) * edge * flick);
+}
+
+
 void main() {
+    if (axonHud == 23) {
+        fragColor = axonFlash();
+        if (fragColor.a < 0.004) {
+            discard;
+        }
+        return;
+    }
     if (axonHud >= 20) {
         fragColor = axonHud == 22 ? axonGsUiBox() : (axonHud == 21 ? axonUiCursor() : axonUiBox());
         if (axonHud == 20 && axonHudExtra.w <= 1.0) {
