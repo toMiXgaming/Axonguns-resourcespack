@@ -555,6 +555,14 @@ Uruchomienie: `python3 zrodla/gen_narzedzia.py [nazwa ...]` (zapis do `zrodla/bu
 
 `zrodla/gen_przedmioty.py` (silnik z `gen_narzedzia.py`) robi od nowa dziewięć modeli `qualityarmory:misc/*`: `grenade`, `smokegrenade`, `incendarygrenade`, `flashbang`, `molotov`, `proxymine`, `medkit`, `ammobag`, `fueltank`. Każdy ma własną teksturę 256×256 (`qualityarmory:axon/misc_<nazwa>`), a układ `display` jest ten sam co w oryginale (`zrodla/display_misc.json`), więc pozycje w ręce i na ziemi się nie zmieniają. Uruchomienie: `python3 zrodla/gen_przedmioty.py`, potem `python3 zrodla/podmien_przedmioty.py` (podmienia modele i dopisuje tekstury w trzech zipach, sprawdza paczkę). Gotowe pliki są w `modele/misc/`, podgląd w `podglady/przedmioty-wyposazenie.png`.
 
+Dziesiąty model to ładunek `c4` (trzy kostki w oliwkowej folii, taśma, zegar z czerwonym wyświetlaczem i kable). Leży płasko, spodem na y = 0, więc AxonGuns przykleja go do ściany obróconego spodem do bloku.
+
+### Materiały wybuchowe AxonGuns (`axon:wybuchowy_<id>`)
+
+`gen_axonguns.py` (`WYBUCHOWE`) dopisuje definicje przedmiotów `assets/axon/items/wybuchowy_<id>.json` dla `wybuchowe.yml` z AxonGuns. Granat to `grenade`, granat zapalający `incendarygrenade`, mołotow `molotov`, granat dymny `smokegrenade`, flashbang `flashbang`, C4 `c4`, a mina `proxymine`. Do tego czcionka `axon:blysk` z jednym białym znakiem `\ue100` (64×16 px skalowane do wysokości 256). Flashbang wysyła go jako tytuł, więc ekran robi się biały i powoli gaśnie.
+
+Granatnik M79 (`gen.py: build_m79`, custom_model_data 92 na kuszy, poza jak w Remingtonie) to gruba lufa 40 mm z otworem, składany celownik, drewniane łoże i kolba z gumową stopką. Dopisuje go `dodaj_bronie_tanie.py` razem z tanimi broniami.
+
 ## Beczki i skrzynie: nowy silnik
 
 `zrodla/gen_pojemniki.py` (silnik z `gen_narzedzia.py`) zastępuje beczki i skrzynie z `axoncore/barrels.py` i `crates.py`. Beczki są teraz okrągłe (stopniowany okrąg z pasów, żebra, kołnierze, wieko z korkami), a rozbite mają poszarpany brzeg, łup i wieko obok. Skrzynie to drewniana, narzędziowa, szafka medyczna, karton z puszkami, wojskowa i elitarna, każda z własną teksturą 256×256 (`axon:item/poj_<nazwa>`). Beczka i otwarta beczka z Minecrafta używają tych samych modeli (tekstury w `axon:block/vanilla/poj_*`). Uruchomienie: `python3 zrodla/gen_pojemniki.py`, potem `python3 zrodla/podmien_pojemniki.py` (podmienia trzy zipy i sprawdza paczkę). `gen_axoncore.py` dopisuje te pliki do swojego wyniku. Drewno w narzędziach ma teraz poprawnie ułożone włókna (wzdłuż osi elementu). Podglądy: `podglady/axoncore-beczki.png`, `podglady/axoncore-skrzynie.png`.

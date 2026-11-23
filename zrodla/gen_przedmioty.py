@@ -17,7 +17,7 @@ from gen_narzedzia import Tool, _c, _lerp, fbm, white, EXTRA_KINDS, MATS
 
 OUT = N.OUT
 NAMES = ['grenade', 'smokegrenade', 'incendarygrenade', 'flashbang', 'molotov', 'proxymine', 'medkit',
-         'ammobag', 'fueltank']
+         'ammobag', 'fueltank', 'c4']
 
 
 def k_glass(m, G, side, el, seed):
@@ -43,6 +43,10 @@ MATS.update({
     'rag': dict(kind='t_cloth', base=(176, 164, 136), wear=(210, 200, 172), edge=0.3, stain=(110, 92, 60)),
     'redcross': dict(kind='t_rubber', base=(196, 40, 36), wear=(226, 80, 70), edge=0.3),
     'label': dict(kind='t_cloth', base=(196, 184, 150), wear=(226, 216, 182), edge=0.3, stain=(150, 130, 90)),
+    'putty': dict(kind='t_cloth', base=(200, 194, 172), wear=(226, 222, 204), edge=0.3, stain=(160, 150, 124)),
+    'wire_red': dict(kind='t_rubber', base=(176, 30, 26), wear=(214, 70, 60), edge=0.3),
+    'wire_blue': dict(kind='t_rubber', base=(34, 70, 170), wear=(80, 110, 210), edge=0.3),
+    'lcd': dict(kind='t_rubber', base=(150, 20, 16), wear=(250, 60, 40), edge=0.0),
 })
 
 
@@ -178,6 +182,38 @@ def proxymine():
     for sz in (1, -1):
         t.box((x - 0.15, 0.2, z + sz * 4.5 - 0.15), (x + 0.15, 1.1, z + sz * 4.5 + 0.15), 'steel_d', 'spike')
     t.box((x - 1.6, 1.5, z + 4.55), (x + 1.6, 2.0, z + 4.68), 'label', 'label')
+    return t
+
+
+def c4():
+    """Ładunek C4 leżący płasko (spód na y = 0): trzy kostki w oliwkowej folii, taśma, zegar z wyświetlaczem,
+    kable do zapalników w kostkach. Przy ścianie AxonGuns obraca go spodem do bloku."""
+    t = Tool('misc_c4')
+    x0, x1 = 2.8, 13.2
+    for i, z in enumerate((4.6, 6.9, 9.2)):                     # trzy kostki materiału
+        t.box((x0, 0.0, z), (x1, 2.2, z + 2.2), 'paint_olive', 'block')
+        t.box((x0 + 0.15, 2.2, z + 0.2), (x1 - 0.15, 2.32, z + 2.0), 'paint_olive', 'blocktop')
+        t.box((x0 - 0.12, 0.25, z + 0.3), (x0, 1.95, z + 1.9), 'putty', 'end')       # widoczny materiał na końcach
+        t.box((x1, 0.25, z + 0.3), (x1 + 0.12, 1.95, z + 1.9), 'putty', 'end')
+    for xb in (4.0, 11.0):                                      # taśma owinięta dookoła
+        t.box((xb, -0.05, 4.45), (xb + 1.1, 2.45, 11.55), 'tape', 'tape')
+    t.box((5.6, 2.32, 9.35), (10.4, 2.4, 11.2), 'label', 'label')                    # naklejka
+    for k in range(3):
+        t.box((6.0, 2.4, 9.7 + k * 0.5), (10.0 - k * 0.8, 2.44, 9.9 + k * 0.5), 'black', 'labeltext')
+    # zegar: obudowa, czerwony wyświetlacz, dwa przyciski
+    t.box((5.6, 2.3, 5.0), (10.4, 3.9, 8.6), 'black', 'timer')
+    t.box((6.0, 3.9, 5.5), (10.0, 3.96, 7.0), 'rubber', 'bezel')
+    t.box((6.3, 3.96, 5.75), (9.7, 4.0, 6.75), 'lcd', 'lcd')
+    t.box((6.4, 3.9, 7.5), (7.3, 4.2, 8.2), 'wire_red', 'button')
+    t.box((8.7, 3.9, 7.5), (9.6, 4.2, 8.2), 'rubber', 'button')
+    t.box((10.4, 2.6, 6.2), (10.7, 3.4, 7.4), 'steel', 'battery')
+    # kable z zegara do zapalników w końcach kostek
+    t.box((10.4, 2.9, 7.6), (12.4, 3.1, 7.8), 'wire_red', 'wire')
+    t.box((12.2, 2.0, 7.6), (12.4, 3.1, 7.8), 'wire_red', 'wire')
+    t.box((5.6, 2.9, 5.3), (3.6, 3.1, 5.5), 'wire_blue', 'wire')
+    t.box((3.6, 2.0, 5.3), (3.8, 3.1, 5.5), 'wire_blue', 'wire')
+    for xc, zc in ((12.0, 7.4), (3.4, 5.1)):                    # zapalniki wbite w materiał
+        t.box((xc, 1.7, zc), (xc + 0.6, 2.6, zc + 0.6), 'brass', 'cap')
     return t
 
 

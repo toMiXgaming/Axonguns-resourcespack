@@ -656,6 +656,15 @@ def d_ruroowka(g):
     ridges(g, 'butt_plate', 'K', -4.4, 0.0, 8, 0.12, cross=(-0.7, 0.7), d=0.03, tag='bp', along='b')
 
 
+def d_m79(g):
+    ridges(g, 'barrel_t', 'T', 2.0, 5.5, 6, 0.16, cross=(-0.5, 0.5), d=0.03, tag='bt')
+    studs(g, 'receiver', [(15.2, -1.1), (18.6, -1.1), (15.2, 0.7), (18.6, 0.7)], 0.1, 0.04, 'RL', tag='rc')
+    ridges(g, 'latch', 'T', 17.3, 19.4, 5, 0.14, cross=(-0.18, 0.18), d=0.03, tag='lt')
+    ridges(g, 'pad', 'K', -4.5, 0.6, 14, 0.14, cross=(-0.8, 0.8), d=0.03, tag='pd', along='b')
+    ridges(g, 'tg_bottom', 'T', 15.9, 19.8, 5, 0.12, cross=(-0.1, 0.1), d=0.02, tag='tg')
+    studs(g, 'hinge', [(14.3, -1.1)], 0.16, 0.04, 'RL', tag='hn')
+
+
 def d_dubeltowka(g):
     muzzle_bore(g, 'barrel_l_a', 0.0, -0.62, 0.4)
     muzzle_bore(g, 'barrel_r_a', 0.0, 0.62, 0.4)
@@ -686,7 +695,7 @@ DETAIL = {'ak47': d_ak47, 'm4a1s': d_m4a1s, 'remmington': d_remmington, 'makarov
           'mp5': d_mp5, 'uzi': d_uzi, 'sg553': d_sg553, 'famas': d_famas, 'dragunov': d_dragunov, 'kar98k': d_kar98k,
           'spas': d_spas, 'asval': d_asval, 'ppsh41': d_ppsh41, 'glock': d_glock, 'rpg': d_rpg,
           'samopal': d_samopal, 'rewolwer': d_rewolwer, 'ruroowka': d_ruroowka, 'dubeltowka': d_dubeltowka,
-          'muszkiet': d_muszkiet}
+          'muszkiet': d_muszkiet, 'm79': d_m79}
 
 
 def apply(g):
