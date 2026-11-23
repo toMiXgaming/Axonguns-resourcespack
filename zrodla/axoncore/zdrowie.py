@@ -40,7 +40,7 @@ IKONA_H, IKONA_ASCENT = 8, 7
 KOLORY = [(0.75, (110, 220, 120)), (0.5, (232, 214, 80)), (0.25, (240, 150, 60)), (0.0001, (226, 64, 52)),
           (0.0, (40, 40, 44))]
 
-# Postać jak gracz z Minecrafta widziany z przodu, w pikselach skina (x0, y0, x1, y1), siatka 16 × 32.
+# Kształt gracza z Minecrafta widzianego z przodu (bez skina), w pikselach (x0, y0, x1, y1), siatka 16 × 32.
 # Prawa ręka i noga gracza są po lewej stronie obrazka (postać stoi przodem). Klatka i brzuch to górna
 # i dolna część tułowia (brzuch od linii paska w dół).
 PROSTOKATY = {
@@ -55,47 +55,18 @@ PROSTOKATY = {
 
 
 def _odcienie(czesc):
-    """Jasność każdego piksela skina części (0–255, biały do barwienia): ciemniejszy brzeg, światło z lewej
-    i z góry, lekki szum jak w skinach oraz twarz, pasek i szwy."""
-    import random
-    import zlib
-    rnd = random.Random(zlib.crc32(czesc.encode()))
+    """Jasność każdego piksela części (0–255, biały do barwienia): gładka bryła bez skina, tylko lekki
+    gradient z góry na dół, jaśniejszy lewy i górny brzeg i cień na prawym i dolnym."""
     x0, y0, x1, y1 = PROSTOKATY[czesc]
     px = {}
     for y in range(y0, y1):
         for x in range(x0, x1):
-            v = 232 - 30 * (y - y0) / max(1, y1 - y0 - 1) + rnd.randint(-9, 9)
+            v = 236 - 26 * (y - y0) / max(1, y1 - y0 - 1)
             if x == x0 or y == y0:
-                v += 14                                    # światło z lewej i z góry
+                v += 14
             if x == x1 - 1 or y == y1 - 1:
-                v -= 46                                    # cień na prawym i dolnym brzegu
+                v -= 40
             px[x, y] = v
-    if czesc == 'glowa':
-        for x in range(4, 12):                             # włosy (dwa górne rzędy) ciemniejsze
-            px[x, 0] -= 50
-            px[x, 1] -= 50
-        px[4, 2] -= 50; px[11, 2] -= 50
-        px[5, 4], px[10, 4] = 255, 255                     # białka oczu
-        px[6, 4], px[9, 4] = 70, 70                        # źrenice
-        px[7, 5] -= 30; px[8, 5] -= 30                     # nos
-        for x in (6, 7, 8, 9):
-            px[x, 6] -= 45                                 # usta
-    elif czesc == 'klatka':
-        px[7, 8] -= 35; px[8, 8] -= 35                     # dekolt
-        px[7, 9] -= 25; px[8, 9] -= 25
-    elif czesc == 'brzuch':
-        for x in range(4, 12):
-            px[x, 15] -= 55                                # pasek
-        px[7, 15] += 60; px[8, 15] += 60                   # klamra
-    elif czesc.startswith('reka'):
-        for x in range(x0, x1):
-            px[x, 18] += 12                                # dłoń jaśniejsza
-            px[x, 19] += 12
-            px[x, 17] -= 20                                # rękaw
-    elif czesc.startswith('noga'):
-        for x in range(x0, x1):
-            px[x, 30] -= 40                                # buty
-            px[x, 31] -= 40
     return {k: max(40, min(255, int(v))) for k, v in px.items()}
 
 
