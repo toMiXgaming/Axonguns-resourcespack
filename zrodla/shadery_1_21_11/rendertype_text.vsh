@@ -906,6 +906,32 @@ bool axonFullVertex() {
 
 #moj_import <minecraft:axon_gs_ui.glsl>
 
+// Błysk flashbanga (AxonGuns): znak czcionki axon:blysk rozciągnięty na cały ekran.
+// Plugin pokazuje go jako tytuł, więc Color.a to zanikanie tytułu (1 = pełny błysk, 0 = koniec),
+// a siłę błysku niesie pierwszy piksel glifu w atlasie (alfa 240-247 obok alfy 239).
+bool axonFlashVertex() {
+    if (ProjMat[2][3] != 0.0) {
+        return false;
+    }
+    vec2 atlas = vec2(textureSize(Sampler0, 0));
+    int vc = gl_VertexID % 4;
+    vec2 cv = vec2(vc == 2 || vc == 3 ? 1.0 : 0.0, vc == 1 || vc == 2 ? 1.0 : 0.0);
+    ivec2 tp = ivec2(floor(UV0 * atlas - cv + 0.5));
+    int a0 = int(floor(texelFetch(Sampler0, tp, 0).a * 255.0 + 0.5));
+    int a1 = int(floor(texelFetch(Sampler0, tp + ivec2(1, 0), 0).a * 255.0 + 0.5));
+    if (a1 != 239 || a0 < 240 || a0 > 247) {
+        return false;
+    }
+    axonHud = 23;
+    axonHudLocal = cv;
+    axonHudExtra = vec4(float(a0 - 240) / 7.0, clamp(Color.a, 0.0, 1.0), 0.0, 0.0);
+    gl_Position = vec4(cv.x * 2.0 - 1.0, 1.0 - cv.y * 2.0, gl_Position.z, 1.0);
+    vertexColor = vec4(1.0);
+    texCoord0 = UV0;
+    return true;
+}
+
+
 void main() {
     gl_Position = axonWorldProj(ProjMat) * axonWorldView(ModelViewMat, ProjMat) * vec4(Position, 1.0);
     axonHud = 0;
@@ -938,6 +964,11 @@ void main() {
     // Odstępy AxonScoreboard przenoszą dane w pozycji znaku. Nie wyświetlaj glifu zastępczego.
     if (ProjMat[2][3] == 0.0 && all(equal(ivec3(floor(Color.rgb * 255.0 + 0.5)), ivec3(2, 13, 249)))) {
         gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
+        return;
+    }
+    if (axonFlashVertex()) {
+        sphericalVertexDistance = 0.0;
+        cylindricalVertexDistance = 0.0;
         return;
     }
     if (axonHudVertex()) {
