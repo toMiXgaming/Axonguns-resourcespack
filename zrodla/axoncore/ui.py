@@ -65,8 +65,10 @@ def _png(img):
 
 
 def _font(ttf):
+    from . import zdrowie   # sylwetka gracza i ikonki stanów do okna „Zdrowie” (napisy okien idą tą czcionką)
     return json.dumps({'providers': [
         {'type': 'bitmap', 'file': 'axon:font/ui/logo.png', 'height': 10, 'ascent': 8, 'chars': [LOGO]},
+        *zdrowie.providers(),
         {'type': 'ttf', 'file': 'axon:ui/' + ttf, 'size': SIZE, 'oversample': OVERSAMPLE,
          'shift': [0.0, SHIFT_Y], 'skip': ''},
         {'type': 'reference', 'id': 'minecraft:include/default'},
