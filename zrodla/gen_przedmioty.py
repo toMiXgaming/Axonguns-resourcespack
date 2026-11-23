@@ -17,7 +17,7 @@ from gen_narzedzia import Tool, _c, _lerp, fbm, white, EXTRA_KINDS, MATS
 
 OUT = N.OUT
 NAMES = ['grenade', 'smokegrenade', 'incendarygrenade', 'flashbang', 'molotov', 'proxymine', 'medkit',
-         'ammobag', 'fueltank', 'c4']
+         'ammobag', 'fueltank', 'c4', 'bomba_domowa']
 
 
 def k_glass(m, G, side, el, seed):
@@ -216,6 +216,42 @@ def c4():
         t.box((xc, 1.7, zc), (xc + 0.6, 2.6, zc + 0.6), 'brass', 'cap')
     return t
 
+
+
+def rura_x(t, x0, x1, yc, zc, r, mat, tag='pipe'):
+    """Poziomy walec wzdłuż osi x o przekroju ośmiokąta (trzy prostopadłościany)."""
+    a = r * 0.45
+    t.box((x0, yc - r, zc - a), (x1, yc + r, zc + a), mat, tag)
+    t.box((x0, yc - a, zc - r), (x1, yc + a, zc + r), mat, tag)
+    c = r * 0.86
+    t.box((x0 + 0.02, yc - c, zc - c), (x1 - 0.02, yc + c, zc + c), mat, tag)
+
+
+def bomba_domowa():
+    """Bomba domowa leżąca płasko (spód na y = 0): dwie zardzewiałe rury z zakrętkami sklejone taśmą,
+    na wierzchu tani budzik i kable do zakrętek. Przy ścianie AxonGuns obraca ją spodem do bloku."""
+    t = Tool('misc_bomba_domowa')
+    r = 1.35
+    for zc in (6.55, 9.45):                                     # dwie rury z prochem
+        rura_x(t, 3.4, 12.6, r, zc, r, 'paint_grey', 'pipe')
+        for xa, xb in ((2.7, 3.5), (12.5, 13.3)):              # zakrętki, szersze od rury
+            rura_x(t, xa, xb, r, zc, r + 0.22, 'steel_d', 'cap')
+        t.box((7.2, 0.4, zc - 1.4), (8.0, 0.9, zc - 1.35), 'rust', 'rustp')
+    for xb in (4.6, 10.3):                                      # taśma owinięta dookoła obu rur
+        t.box((xb, -0.05, 5.05), (xb + 1.2, 2.85, 10.95), 'tape', 'tape')
+    # budzik: korpus, tarcza, dzwonki i nóżki
+    t.box((6.2, 2.7, 6.3), (9.8, 3.6, 9.7), 'paint_yellow', 'clock')
+    t.box((6.6, 3.6, 6.7), (9.4, 3.68, 9.3), 'plastic', 'face')
+    t.box((7.95, 3.68, 7.1), (8.1, 3.72, 8.05), 'black', 'hand')
+    t.box((8.0, 3.68, 7.95), (9.0, 3.72, 8.1), 'black', 'hand')
+    for zb in (6.4, 9.0):
+        t.box((7.6, 3.6, zb), (8.4, 4.1, zb + 0.6), 'brass', 'bell')
+    # kable z budzika do zakrętek
+    t.box((9.8, 3.0, 7.6), (12.9, 3.2, 7.8), 'wire_red', 'wire')
+    t.box((12.7, 2.0, 7.6), (12.9, 3.2, 7.8), 'wire_red', 'wire')
+    t.box((3.1, 3.0, 8.2), (6.2, 3.2, 8.4), 'wire_blue', 'wire')
+    t.box((3.1, 2.0, 8.2), (3.3, 3.2, 8.4), 'wire_blue', 'wire')
+    return t
 
 def medkit():
     t = Tool('misc_medkit')

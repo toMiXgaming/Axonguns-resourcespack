@@ -322,7 +322,8 @@ def _model(z, ref):
 
 # Materiały wybuchowe AxonGuns (wybuchowe.yml): item_model axon:wybuchowy_<id> -> modele qualityarmory:misc/*
 WYBUCHOWE = {'granat': 'grenade', 'granat_zapalajacy': 'incendarygrenade', 'molotow': 'molotov',
-             'granat_dymny': 'smokegrenade', 'flashbang': 'flashbang', 'c4': 'c4', 'mina': 'proxymine'}
+             'granat_dymny': 'smokegrenade', 'flashbang': 'flashbang', 'c4': 'c4', 'bomba_domowa': 'bomba_domowa',
+             'mina': 'proxymine'}
 
 
 BLYSK_STOPNIE = 8   # ile stopni siły błysku niosą znaki czcionki axon:blysk
