@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Dopisuje do gotowych zipów system zdrowia AxonCore:
 - przedmioty medyczne axon:<nazwa> (modele 3D z build/, najpierw python3 gen_medyczne.py),
-- sylwetkę gracza i ikonki stanów (axoncore/zdrowie.py) w czcionkach minecraft:default i axon:hud.
+- sylwetkę gracza i ikonki stanów (axoncore/zdrowie.py) w czcionkach minecraft:default i axon:hud,
+- schowane serca gracza (axoncore/serca.py): HP pokazuje kafel zdrowia AxonScoreboard.
 
 Czcionki default.json i hud.json są pisane od nowa z generatora tablicy (axoncore/tablica.py i hud.py),
 więc razem z sylwetką trafia do zipów wszystko, co generator ma, a czego zip jeszcze nie miał.
@@ -11,7 +12,7 @@ import os, sys, zipfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gen_medyczne
-from axoncore import tablica
+from axoncore import tablica, serca
 
 ZIPY = ['QualityArmory-21-axon.zip', 'QualityArmory-21-axon-1.21.11.zip', 'QualityArmory-21-axon-1.21.11-shadery.zip']
 
@@ -21,6 +22,7 @@ def pliki(nakladka_1_21_0=True):
     for fn, data in tablica.pliki().items():
         if '/font/' in fn:
             files[fn] = data
+    files.update(serca.pliki())
     return files
 
 

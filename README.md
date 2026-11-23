@@ -565,6 +565,9 @@ Granatnik M79 (`gen.py: build_m79`, custom_model_data 92 na kuszy, poza jak w Re
 
 ## System zdrowia: przedmioty medyczne i sylwetka gracza
 
+Serca gracza na pasku zdrowia są schowane (puste sprite'y `gui/sprites/hud/heart/*`, `zrodla/axoncore/serca.py`).
+HP pokazuje kafel zdrowia AxonScoreboard 1.8.1+ (sylwetka z częściami ciała z Axon-items). Serca wierzchowca zostają.
+
 Przedmioty medyczne Axon-items (`zrodla/gen_medyczne.py`, silnik z `gen_narzedzia.py`): `axon:bandage` (bandaż),
 `axon:tourniquet` (opaska uciskowa), `axon:first_aid_kit` (apteczka mała), `axon:military_medkit` (apteczka
 wojskowa), `axon:splint` (szyna), `axon:painkillers` (środki przeciwbólowe), `axon:surgical_kit` (zestaw
