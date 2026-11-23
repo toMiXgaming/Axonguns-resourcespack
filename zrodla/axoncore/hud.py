@@ -18,7 +18,7 @@ import json
 
 from PIL import Image
 
-from . import tablica
+from . import tablica, zdrowie
 
 FONT_DIR = 'assets/axon/textures/font/hud/'
 FONT_REF = 'axon:font/hud/'
@@ -131,7 +131,10 @@ def _znaki():
     return out
 
 
-ZNAKI = _znaki()
+# Znaki systemu zdrowia (sylwetka, ikonki stanów) są na samym końcu listy, żeby nie przesuwać numerów
+# znaków, które zna starszy AxonScoreboard.
+ZNAKI = _znaki() + [cp for cp, *_ in zdrowie.znaki()]
+assert len(ZNAKI) < HUD_STRIDE
 INDEX = {cp: i for i, cp in enumerate(ZNAKI)}
 
 
@@ -162,6 +165,7 @@ def _slot(slot, delta):
             rows.append(r)
         taken.update(ord(ch) for row in VANILLA[plik] for ch in row if ch != '\u0000')
         providers.append({'type': 'bitmap', 'file': plik, 'height': height, 'ascent': ascent - delta, 'chars': rows})
+    providers += zdrowie.providers(delta, lambda cp: hud_cp(slot, cp))
     return providers
 
 

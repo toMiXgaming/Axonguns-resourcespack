@@ -98,6 +98,8 @@ def pliki():
             files['assets/axon/textures/item/%s.png' % name] = _png(m.texture)
     from gen_pojemniki import pliki as pliki_pojemnikow   # beczki i skrzynie z build/ (python3 gen_pojemniki.py)
     files.update(pliki_pojemnikow())
+    from gen_medyczne import pliki as pliki_medyczne   # przedmioty medyczne z build/ (python3 gen_medyczne.py)
+    files.update(pliki_medyczne())
     return files
 
 
