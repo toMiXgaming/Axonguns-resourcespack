@@ -421,14 +421,29 @@ def _sciskanie(model, disp):
     return float(np.clip(model_r / ekran, 0.25, 1.0))
 
 
-def przesun(disp, p, charged):
-    """Przesunięcie translacji (bloki), po którym punkt p modelu leży na osi widoku (środek ekranu)."""
-    c = apply_display(p[None], disp)[0]
+Z_TYL_OPTYKI = -0.08     # bloki od oka do tyłu kolimatora/holo przy celowaniu (bliska płaszczyzna to 0,05)
+MAKS_ZBLIZENIE = 3.2     # najwyżej tyle razy bliżej niż bez przesunięcia (małe pistolety nie robią się ogromne)
+
+
+def przesun(disp, p, charged, tyl=None):
+    """Przesunięcie translacji (bloki), po którym punkt p modelu leży na osi widoku (środek ekranu).
+
+    tyl: punkty modelu celownika; wtedy broń jest też przysunięta wzdłuż osi widoku tak, żeby
+    najbliższy punkt celownika był Z_TYL_OPTYKI bloku przed okiem, ale najwyżej MAKS_ZBLIZENIE razy
+    bliżej niż wcześniej (kropka zostaje na środku)."""
+    pts = np.vstack([p[None], tyl]) if tyl is not None else p[None]
+    c = apply_display(pts, disp)
     if charged:
-        c = _ARM_R + np.array([-0.641864, 0, 0]) + _CHARGED_R @ c
-        return _CHARGED_R.T @ np.array([-c[0], -c[1], 0.0])
-    c = _ARM_R + c
-    return np.array([-c[0], -c[1], 0.0])
+        c = _ARM_R + np.array([-0.641864, 0, 0]) + c @ _CHARGED_R.T
+    else:
+        c = _ARM_R + c
+    if tyl is not None:
+        tyl_z = c[1:, 2].max()
+        dz = min(Z_TYL_OPTYKI, tyl_z / MAKS_ZBLIZENIE) - tyl_z
+    else:
+        dz = 0.0
+    v = np.array([-c[0, 0], -c[0, 1], dz])
+    return _CHARGED_R.T @ v if charged else v
 
 
 def _z_przesunieciem(wpis, delta):
@@ -482,8 +497,11 @@ def pliki(z, warianty, bronie):
             if _w_granicach(mc):
                 modele_cel[dod] = (mc, img)
         if modele_cel:
-            kropka = _srodek(next(iter(modele_cel.values()))[0], ('rd_dot', 'hl_dot'))
-            PRZESUNIECIE[nazwa] = {v: przesun(w[v]['firstperson_righthand'], kropka, v == 'cel') for v in OPT_WARIANTY}
+            mc0 = next(iter(modele_cel.values()))[0]
+            kropka = _srodek(mc0, ('rd_dot', 'hl_dot'))
+            # najbliższy oku punkt z obu celowników (holo jest dłuższe), żeby żaden nie wszedł w kamerę
+            tyl = np.array([x for mc, _ in modele_cel.values() for e in mc['elements'] for x in (e['from'], e['to'])], float)
+            PRZESUNIECIE[nazwa] = {v: przesun(w[v]['firstperson_righthand'], kropka, v == 'cel', tyl) for v in OPT_WARIANTY}
             w.update({OPT_WARIANTY[v]: _z_przesunieciem(w[v], PRZESUNIECIE[nazwa][v]) for v in OPT_WARIANTY})
         for dod, (mc, img) in modele_cel.items():
             mc['credit'] = 'AXON - gen_dodatki.py'
