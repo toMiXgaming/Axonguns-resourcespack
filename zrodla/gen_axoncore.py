@@ -24,6 +24,7 @@ from axoncore.vehicles import V
 from axoncore.barrels import TEX as BARREL_TEX
 from axoncore.crates import TEX as CRATE_TEX
 from axoncore import siarka
+from axoncore import serca
 from axoncore import znacznik_x
 from axoncore import tablica
 from axoncore import ui
@@ -71,6 +72,7 @@ def pliki():
     files.update(znacznik_x.pliki())   # znacznik X na pniu przy ścinaniu drzew (axoncore/znacznik_x.py)
     files.update(tablica.pliki())   # tablica wyników AxonScoreboard: panel, logo, ikony, paski (axoncore/tablica.py)
     files.update(ui.pliki())   # czcionka okien UI (Inter) i logo AXONCORE (axoncore/ui.py)
+    files.update(serca.pliki())   # schowane serca: HP pokazuje kafel zdrowia AxonScoreboard (axoncore/serca.py)
     files.update(siarka.pliki())   # Surowa Siarka: ruda siarki zamiast rudy miedzi i ikona grudki (axoncore/siarka.py)
     for key, m in T.items():   # narzędzia Axon jako przedmioty (items/*.json); modele i tekstury daje gen_narzedzia.py
         ns, name = key.split(':')
