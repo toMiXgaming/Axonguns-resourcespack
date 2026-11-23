@@ -1171,6 +1171,19 @@ float axonGear(vec2 p, float r, float n, float turn) {
     return max(outer, hole);
 }
 
+// linia EKG: wysokość nad linią bazową w punkcie x (jedno uderzenie co 170 px)
+float axonEcgWave(float c, float w, float u) {
+    float d = (u - c) / w;
+    return exp(-d * d);
+}
+
+float axonEcg(float x) {
+    float u = fract(x / 170.0);
+    return 5.0 * axonEcgWave(0.18, 0.035, u) - 6.0 * axonEcgWave(0.40, 0.012, u)
+         + 40.0 * axonEcgWave(0.43, 0.015, u) - 12.0 * axonEcgWave(0.465, 0.014, u)
+         + 9.0 * axonEcgWave(0.68, 0.055, u);
+}
+
 vec4 axonUiBox() {
     vec2 size = axonHudBox.xy;
     int style = int(axonHudBox.z + 0.5);
@@ -1309,6 +1322,49 @@ vec4 axonUiBox() {
             }
             if (q.y > 150.0) bg += axonEmbers(q, t, fire) * 1.1;
             bg *= 1.0 - 0.45 * smoothstep(0.35, 0.85, length(e * vec2(1.15, 1.0)));
+            bg += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.01;
+            return vec4(bg, 1.0);
+        }
+        // stan 3 (/zdrowie): gabinet. Chłodne tło, siatka krzyżyków, duży krzyż w rogu bije jak serce,
+        // a przez ekran biegnie linia EKG jak na monitorze (jasny punkt z gasnącym śladem)
+        if (state == 3) {
+            q = vec2(gl_FragCoord.x / ScreenSize.x * 640.0, (1.0 - gl_FragCoord.y / ScreenSize.y) * 384.0);
+            e = q / vec2(640.0, 384.0) - 0.5;
+            float ph = fract(t * 0.5);
+            vec3 red = vec3(0.78, 0.3, 0.3);
+            vec3 bg = mix(vec3(0.03, 0.038, 0.048), vec3(0.011, 0.014, 0.019), smoothstep(0.0, 384.0, q.y));
+            // chłodne światło lampy z prawego górnego rogu
+            bg += vec3(0.35, 0.55, 0.65) * 0.07 * (1.0 - smoothstep(0.0, 420.0, length(q - vec2(560.0, -40.0))));
+            // siatka małych krzyżyków co 24 px
+            vec2 gc = mod(q, 24.0) - 12.0;
+            float plus = min(axonRoundBox(gc, vec2(3.0, 0.6), 0.3), axonRoundBox(gc, vec2(0.6, 3.0), 0.3));
+            bg += vec3(0.55, 0.65, 0.7) * 0.04 * (1.0 - smoothstep(-0.5, 0.5, plus));
+            // bicie serca: dwa uderzenia w okresie 2 s
+            float b1 = (ph - 0.08) / 0.04;
+            float b2 = (ph - 0.24) / 0.04;
+            float beat = exp(-b1 * b1) + 0.6 * exp(-b2 * b2);
+            // duży krzyż medyczny w prawym dolnym rogu: obrys, lekkie wypełnienie i poświata
+            vec2 cq = q - vec2(548.0, 262.0);
+            float cr = min(axonRoundBox(cq, vec2(72.0, 24.0), 7.0), axonRoundBox(cq, vec2(24.0, 72.0), 7.0));
+            bg += red * (0.05 + 0.04 * beat) * (1.0 - smoothstep(-1.0, 1.0, cr));
+            bg += red * (0.2 + 0.16 * beat) * (1.0 - smoothstep(0.0, 1.5, abs(cr)));
+            bg += red * 0.05 * exp(-max(cr, 0.0) * 0.06) * (0.6 + 0.4 * beat);
+            // linia EKG na dole ekranu; odległość od krzywej z pochodnej, żeby szpilka miała stałą grubość
+            float y0 = 352.0;
+            float ey = y0 - axonEcg(q.x);
+            float dy = (axonEcg(q.x + 1.0) - axonEcg(q.x - 1.0)) * 0.5;
+            float ld = abs(q.y - ey) / sqrt(1.0 + dy * dy);
+            float head = fract(t * 0.25) * 760.0 - 60.0;
+            float behind = mod(head - q.x, 760.0);
+            float trail = exp(-behind / 200.0);
+            float lineA = 1.0 - smoothstep(0.4, 1.4, ld);
+            bg += AXON_UI_ACC * lineA * (0.1 + 0.75 * trail);
+            bg += AXON_UI_ACC * 0.12 * exp(-ld * 0.25) * trail;
+            vec2 hd = q - vec2(head, y0 - axonEcg(head));
+            bg += AXON_UI_ACC * 0.9 * exp(-dot(hd, hd) * 0.05);
+            // przy uderzeniu brzegi ekranu lekko czerwienieją
+            bg += red * 0.035 * beat * smoothstep(0.35, 0.85, length(e * vec2(1.15, 1.0)));
+            bg *= 1.0 - 0.3 * smoothstep(0.4, 0.85, length(e * vec2(1.15, 1.0)));
             bg += (axonHash(dot(floor(q * 2.0), vec2(1.0, 1291.0)) + floor(t * 8.0)) - 0.5) * 0.01;
             return vec4(bg, 1.0);
         }
