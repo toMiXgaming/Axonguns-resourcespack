@@ -3311,10 +3311,70 @@ def build_muszkiet():
     return g
 
 
+def build_m79():
+    """M79 grenade launcher: fat 40 mm break-open barrel with folding leaf sight, wooden fore-end,
+    steel receiver with top latch, walnut stock with thick rubber recoil pad."""
+    k = 22.25 / 46.2
+    g = Gun('m79', dict(s=-1, k=k, kw=k * 1.25, Xm=k * 20.5, Yb=10.75, Zc=4.25))
+    B, C = g.b, g.cyl
+    sl = 1.75
+    # --- 40 mm barrel (hollow), muzzle band, front sight
+    g.tube('barrel', (0.0, 14.5), 0.0, 1.2, 0.72, 'blued')
+    g.tube('muzzle_band', (0.0, 0.5), 0.0, 1.3, 0.72, 'blued')
+    B('fs_base', (0.6, 1.5), (1.15, 1.35), 0.32, 'blued')
+    B('fs_l', (0.8, 1.3), (1.35, sl + 0.25), (-0.32, -0.22), 'blued')
+    B('fs_r', (0.8, 1.3), (1.35, sl + 0.25), (0.22, 0.32), 'blued')
+    B('fs_post', (0.95, 1.15), (1.35, sl), 0.06, 'blued')
+    # --- folding leaf sight (folded down) with notch
+    B('rs_base', (6.0, 8.6), (1.15, 1.45), 0.5, 'blued')
+    B('rs_hinge', (8.2, 8.8), (1.2, 1.6), 0.55, 'parts')
+    B('rs_leaf', (5.4, 8.4), (1.45, 1.6), 0.42, 'blued')
+    B('rs_l', (8.4, 8.7), (1.45, sl + 0.05), (-0.42, -0.1), 'blued')
+    B('rs_r', (8.4, 8.7), (1.45, sl + 0.05), (0.1, 0.42), 'blued')
+    # --- wooden fore-end under the barrel, sling swivel
+    B('forend', (3.0, 13.0), (-2.0, -0.55), 0.95, 'wood_870')
+    B('forend_lo', (3.4, 12.6), (-2.25, -1.9), 0.75, 'wood_870')
+    B('forend_cap', (2.6, 3.0), (-1.85, -0.7), 0.85, 'blued')
+    B('sw_base', (5.0, 5.6), (-2.5, -2.2), 0.2, 'steel')
+    B('sw_loop', (4.7, 5.9), (-2.75, -2.5), 0.15, 'steel')
+    # --- receiver: hinge, frame, top latch and safety
+    B('hinge', (13.6, 15.0), (-1.6, -0.6), 1.0, 'parts')
+    B('receiver', (14.5, 19.2), (-1.55, 1.15), 1.05, 'blued')
+    B('rec_top', (15.0, 19.2), (1.15, 1.35), 0.8, 'blued')
+    B('latch', (17.0, 19.6), (1.35, 1.6), 0.28, 'parts')
+    B('safety', (18.6, 19.4), (1.35, 1.55), 0.18, 'stainless')
+    B('pin', (14.8, 15.4), (-1.3, -0.8), (1.05, 1.12), 'steel')
+    # --- trigger guard and trigger
+    B('tg_front', (15.6, 15.95), (-3.0, -1.5), 0.24, 'blued')
+    B('tg_bottom', (15.6, 20.2), (-3.25, -2.95), 0.26, 'blued')
+    B('tg_rear', (19.9, 20.2), (-3.1, -1.5), 0.24, 'blued')
+    B('trigger', (17.2, 17.5), (-2.6, -1.5), 0.12, 'parts', rot=(-22.5, (17.35, -1.5)))
+    # --- walnut wrist and stock, thick rubber recoil pad
+    B('wrist', (19.2, 22.5), (-2.4, 0.9), 0.9, 'wood_870')
+    B('stock_body', (22.5, 31.0), (-2.4, 0.9), 0.95, 'wood_870')
+    toe = g.slope('stock', (24.0, -2.25), 22.5, 1.0, 31.0, -2.4, 0.95, 'wood_870')
+    B('pad', (31.0, 32.3), (toe - 0.05, 1.0), 1.0, 'rubber')
+
+    D = g.dec
+    D(stripes('T', 'a', 0.3, 0.1, els=['rs_leaf'], mul=0.7))
+    D(hatch('RL', els=['forend'], period=0.3, mul=0.8))
+    D(hatch('RL', els=['wrist'], period=0.25, mul=0.8, b=(-2.0, 0.5)))
+    D(text('L', 'AXON', 15.2, -0.6, els=['receiver'], col=(176, 178, 184), snap=True))
+    D(text('R', 'AXON', 24.2, -0.3, els=['stock_body'], col=(52, 26, 12), snap=True))
+    D(text('L', 'AXON', 24.2, -0.3, els=['stock_body'], col=(52, 26, 12), snap=True))
+    D(stripes('K', 'b', 0.25, 0.1, els=['pad'], mul=0.6))
+    D(paint('K', (-0.05, 0.05), (1.35, sl), (236, 236, 232), els=['fs_post']))
+
+    g.sight = dict(rear=(8.55, sl), front=(1.05, sl))
+    g.ads = dict(cam=(30.0, sl), front=(1.05, sl))
+    g.grip = (20.5, -1.5)
+    return g
+
+
 TANIE = {'samopal': build_samopal, 'ruroowka': build_ruroowka, 'muszkiet': build_muszkiet,
-         'rewolwer': build_rewolwer, 'dubeltowka': build_dubeltowka}
+         'rewolwer': build_rewolwer, 'dubeltowka': build_dubeltowka, 'm79': build_m79}
 DISPLAY_OF = {'samopal': 'makarov', 'rewolwer': 'makarov', 'ruroowka': 'remmington',
-              'dubeltowka': 'remmington', 'muszkiet': 'kar98k'}
+              'dubeltowka': 'remmington', 'muszkiet': 'kar98k', 'm79': 'remmington'}
 
 
 BUILDERS = {'ak47': build_ak, 'm4a1s': build_m4, 'remmington': build_870, 'makarov': build_pm,
@@ -3339,7 +3399,7 @@ def _with_detail(fn):
 BUILDERS = {k: _with_detail(v) for k, v in BUILDERS.items()}
 
 # guns that QualityArmory's own pack has no model for: custom_model_data on the crossbow for the new entry
-NEW_GUNS = {'glock': 86, 'samopal': 87, 'ruroowka': 88, 'muszkiet': 89, 'rewolwer': 90, 'dubeltowka': 91}
+NEW_GUNS = {'glock': 86, 'samopal': 87, 'ruroowka': 88, 'muszkiet': 89, 'rewolwer': 90, 'dubeltowka': 91, 'm79': 92}
 
 if __name__ == '__main__':
     import sys

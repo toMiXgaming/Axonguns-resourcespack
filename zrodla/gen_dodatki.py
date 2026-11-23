@@ -57,10 +57,22 @@ PRZEDMIOT = 'ak47'        # na jakiej broni liczyć dodatek pokazywany jako prze
 # ------------------------------------------------------------------ geometria (jednostki gen.py: u wzdłuż broni
 # od wylotu, v w górę, w w bok; oś lufy to v = 0, w = 0)
 
-def _profile(g, u, wmax=1.2):
+_PRZYRZADY = ('fs_', 'fsb_', 'rs_', 'buis_')                       # jak gen_axonguns.PRZYRZADY
+_ZOSTAJA = ('_base', '_collar', '_block', '_lug', '_swivel', '_tower_lo')
+
+
+def _bez_przyrzadow(e):
+    """Element zostaje na broni z celownikiem (muszka i szczerbinka znikają)."""
+    n = str(e.name or '')
+    return not (n.startswith(_PRZYRZADY) and not n.endswith(_ZOSTAJA))
+
+
+def _profile(g, u, wmax=1.2, bez_przyrzadow=False):
     """Najniższe i najwyższe v elementów broni nad/pod osią w przekroju u (blisko środka)."""
     lo, hi = None, None
     for e in g.els:
+        if bez_przyrzadow and not _bez_przyrzadow(e):
+            continue
         if e.lo[2] <= u <= e.hi[2] and e.lo[0] <= wmax and e.hi[0] >= -wmax:
             lo = e.lo[1] if lo is None else min(lo, e.lo[1])
             hi = e.hi[1] if hi is None else max(hi, e.hi[1])
@@ -209,7 +221,8 @@ def zbuduj(nazwa, dodatek, sciskaj=1.0):
         a.b('sc_turret_w', (uc - 0.5, uc + 0.5), (vc - 0.4, vc + 0.4), (0.55, 1.0), 'parts')
         for nm, du in (('sc_ring_f', -L / 2 + 1.0), ('sc_ring_r', L / 2 - 1.6)):
             a.cyl(nm, (uc + du, uc + du + 0.6), vc, 0.72, 'black')
-            a.b(nm + '_base', (uc + du, uc + du + 0.6), (hi - 0.05, vc - 0.6), 0.42, 'black')
+            _, hi_b = _profile(g, uc + du + 0.3, 0.8, bez_przyrzadow=True)
+            a.b(nm + '_base', (uc + du, uc + du + 0.6), (hi_b - 0.05, vc - 0.6), 0.42, 'black')
     elif dodatek == 'kolimator':
         if _ma_lunete(g) or not g.sight:
             return None
@@ -220,7 +233,8 @@ def zbuduj(nazwa, dodatek, sciskaj=1.0):
         base = max(hi, g.sight['rear'][1] - 0.3)
         W = max(0.42, min(0.5, _szerokosc(g, uc, base - 1.0, base + 0.05)))    # nie szerszy niż broń
         a.podstawa = base
-        a.b('rd_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), W - 0.05, 'rail')
+        _, hi_b = _profile(g, uc, 0.8, bez_przyrzadow=True)
+        a.b('rd_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (min(base, hi_b) - 0.05, base + 0.35), W - 0.05, 'rail')
         a.b('rd_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.75), W, 'black')
         a.b('rd_hood_l', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (-W, -W + 0.12), 'black')
         a.b('rd_hood_r', (uc - L / 2, uc - L / 2 + 0.45), (base + 0.75, base + 1.75), (W - 0.12, W), 'black')
@@ -305,7 +319,8 @@ def zbuduj(nazwa, dodatek, sciskaj=1.0):
         base = max(hi, g.sight['rear'][1] - 0.3)
         W = max(0.42, min(0.45 if pistol else 0.5, _szerokosc(g, uc, base - 1.0, base + 0.05)))    # nie szerszy niż broń
         a.podstawa = base
-        a.b('hl_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (base - 0.05, base + 0.35), W - 0.1, 'rail')
+        _, hi_b = _profile(g, uc, 0.8, bez_przyrzadow=True)
+        a.b('hl_mount', (uc - L / 2 - 0.2, uc + L / 2 + 0.2), (min(base, hi_b) - 0.05, base + 0.35), W - 0.1, 'rail')
         a.b('hl_body', (uc - L / 2, uc + L / 2), (base + 0.35, base + 0.63), W, 'black')
         a.b('hl_batt', (uc + L / 2 - 1.1, uc + L / 2), (base + 0.63, base + 0.9), W - 0.2, 'parts')      # bateria z tyłu na górze
         # okno na wysokości OPT_V (środek 0.63..1.73)
@@ -348,8 +363,9 @@ def zbuduj(nazwa, dodatek, sciskaj=1.0):
         return None
     if sciskaj != 1.0 and hasattr(a, 'podstawa'):
         for e in a.els:
-            e.lo[1] = a.podstawa + (e.lo[1] - a.podstawa) * sciskaj
-            e.hi[1] = a.podstawa + (e.hi[1] - a.podstawa) * sciskaj
+            # ściskane jest tylko to, co nad podstawą; podkładka pod nią zostaje i dalej dotyka broni
+            e.lo[1] = a.podstawa + max(0.0, e.lo[1] - a.podstawa) * sciskaj + min(0.0, e.lo[1] - a.podstawa)
+            e.hi[1] = a.podstawa + max(0.0, e.hi[1] - a.podstawa) * sciskaj + min(0.0, e.hi[1] - a.podstawa)
     return a
 
 
@@ -421,14 +437,29 @@ def _sciskanie(model, disp):
     return float(np.clip(model_r / ekran, 0.25, 1.0))
 
 
-def przesun(disp, p, charged):
-    """Przesunięcie translacji (bloki), po którym punkt p modelu leży na osi widoku (środek ekranu)."""
-    c = apply_display(p[None], disp)[0]
+Z_TYL_OPTYKI = -0.08     # bloki od oka do tyłu kolimatora/holo przy celowaniu (bliska płaszczyzna to 0,05)
+MAKS_ZBLIZENIE = 3.2     # najwyżej tyle razy bliżej niż bez przesunięcia (małe pistolety nie robią się ogromne)
+
+
+def przesun(disp, p, charged, tyl=None):
+    """Przesunięcie translacji (bloki), po którym punkt p modelu leży na osi widoku (środek ekranu).
+
+    tyl: punkty modelu celownika; wtedy broń jest też przysunięta wzdłuż osi widoku tak, żeby
+    najbliższy punkt celownika był Z_TYL_OPTYKI bloku przed okiem, ale najwyżej MAKS_ZBLIZENIE razy
+    bliżej niż wcześniej (kropka zostaje na środku)."""
+    pts = np.vstack([p[None], tyl]) if tyl is not None else p[None]
+    c = apply_display(pts, disp)
     if charged:
-        c = _ARM_R + np.array([-0.641864, 0, 0]) + _CHARGED_R @ c
-        return _CHARGED_R.T @ np.array([-c[0], -c[1], 0.0])
-    c = _ARM_R + c
-    return np.array([-c[0], -c[1], 0.0])
+        c = _ARM_R + np.array([-0.641864, 0, 0]) + c @ _CHARGED_R.T
+    else:
+        c = _ARM_R + c
+    if tyl is not None:
+        tyl_z = c[1:, 2].max()
+        dz = min(Z_TYL_OPTYKI, tyl_z / MAKS_ZBLIZENIE) - tyl_z
+    else:
+        dz = 0.0
+    v = np.array([-c[0, 0], -c[0, 1], dz])
+    return _CHARGED_R.T @ v if charged else v
 
 
 def _z_przesunieciem(wpis, delta):
@@ -482,8 +513,11 @@ def pliki(z, warianty, bronie):
             if _w_granicach(mc):
                 modele_cel[dod] = (mc, img)
         if modele_cel:
-            kropka = _srodek(next(iter(modele_cel.values()))[0], ('rd_dot', 'hl_dot'))
-            PRZESUNIECIE[nazwa] = {v: przesun(w[v]['firstperson_righthand'], kropka, v == 'cel') for v in OPT_WARIANTY}
+            mc0 = next(iter(modele_cel.values()))[0]
+            kropka = _srodek(mc0, ('rd_dot', 'hl_dot'))
+            # najbliższy oku punkt z obu celowników (holo jest dłuższe), żeby żaden nie wszedł w kamerę
+            tyl = np.array([x for mc, _ in modele_cel.values() for e in mc['elements'] for x in (e['from'], e['to'])], float)
+            PRZESUNIECIE[nazwa] = {v: przesun(w[v]['firstperson_righthand'], kropka, v == 'cel', tyl) for v in OPT_WARIANTY}
             w.update({OPT_WARIANTY[v]: _z_przesunieciem(w[v], PRZESUNIECIE[nazwa][v]) for v in OPT_WARIANTY})
         for dod, (mc, img) in modele_cel.items():
             mc['credit'] = 'AXON - gen_dodatki.py'

@@ -67,7 +67,7 @@ Dodatki na broni (`zrodla/gen_dodatki.py`) włącza flaga `custom_model_data` od
 
 Przy celowaniu (`zrodla/celowniki.py`) celowniki nie są już modelem na broni, tylko płaską nakładką tuż przed okiem, zawsze na środku ekranu:
 - luneta (flaga lunety, a w AWP i Dragunovie zawsze): jedna płaska karta 2:1 z teksturą 1536×768 rysowaną w `zrodla/okular.py` (gruby gumowy okular z bliska z cieniem, korpus lunety z nitami, bez pokręteł, okno ze szkłem przyciemnionym przy brzegu, odblask, siatka mil-dot z grubymi ramionami i czerwonym punktem). Poza rysunkiem tekstura jest przezroczysta, więc dookoła widać świat; broni wtedy nie widać. Zastępuje dawną rurę AWP, przez którą było widać tylko mały kwadrat,
-- kolimator i holo: bez nakładki. Przy celowaniu widać ich klockowy model 3D na broni (te same materiały i styl co broń, szerokość nie większa niż broń w tym miejscu, najwyżej 0,5). Model do celowania jest ściśnięty w pionie, bo display broni rozciąga go w widoku, a cała broń jest przesunięta tak, żeby kropka wypadła na środku ekranu (warianty `cel_opt` i `cel_u_opt`). Kropka obu celowników jest na tej samej wysokości nad podstawą (`OPT_V`), holo ma dodatkowo pierścień wokół kropki.
+- kolimator i holo: bez nakładki. Przy celowaniu widać ich klockowy model 3D na broni (te same materiały i styl co broń, szerokość nie większa niż broń w tym miejscu, najwyżej 0,5). Model do celowania jest ściśnięty w pionie, bo display broni rozciąga go w widoku, a cała broń jest przesunięta tak, żeby kropka wypadła na środku ekranu (warianty `cel_opt` i `cel_u_opt`). Przy tym broń jest też przysunięta do oka wzdłuż osi widoku, tak że tył celownika jest 0,08 bloku przed kamerą (`Z_TYL_OPTYKI`), ale najwyżej 3,2 raza bliżej niż bez przesunięcia (`MAKS_ZBLIZENIE`, żeby małe pistolety nie zasłaniały ekranu). Kropka obu celowników jest na tej samej wysokości nad podstawą (`OPT_V`), holo ma dodatkowo pierścień wokół kropki.
 - krzyżyk przy celowaniu: shader GUI `position_tex_color` (zrodla/shadery i shadery_1_21_11) nie rysuje krzyżyka, gdy reszta `GameTime` × 24000 jest w oknie 13000–13140 (`AXON_AIM_TIME`). To okno ustawia AxonGuns (`AimHudSignal`) celującemu graczowi; hotbar zostaje.
 
 Z założonym celownikiem (kolimator, holo, luneta) broń ma wariant bez muszki i szczerbinki (`axon:bron/<wariant>_bez/<broń>`, elementy `fs_*`, `fsb_*`, `rs_*`, `buis_*` bez podstaw), więc nie widać dwóch celowników naraz.
@@ -554,6 +554,14 @@ Uruchomienie: `python3 zrodla/gen_narzedzia.py [nazwa ...]` (zapis do `zrodla/bu
 ## Wyposażenie: granaty, mina, apteczka, torba z amunicją, kanister
 
 `zrodla/gen_przedmioty.py` (silnik z `gen_narzedzia.py`) robi od nowa dziewięć modeli `qualityarmory:misc/*`: `grenade`, `smokegrenade`, `incendarygrenade`, `flashbang`, `molotov`, `proxymine`, `medkit`, `ammobag`, `fueltank`. Każdy ma własną teksturę 256×256 (`qualityarmory:axon/misc_<nazwa>`), a układ `display` jest ten sam co w oryginale (`zrodla/display_misc.json`), więc pozycje w ręce i na ziemi się nie zmieniają. Uruchomienie: `python3 zrodla/gen_przedmioty.py`, potem `python3 zrodla/podmien_przedmioty.py` (podmienia modele i dopisuje tekstury w trzech zipach, sprawdza paczkę). Gotowe pliki są w `modele/misc/`, podgląd w `podglady/przedmioty-wyposazenie.png`.
+
+Dziesiąty model to ładunek `c4` (trzy kostki w oliwkowej folii, taśma, zegar z czerwonym wyświetlaczem i kable). Leży płasko, spodem na y = 0, więc AxonGuns przykleja go do ściany obróconego spodem do bloku.
+
+### Materiały wybuchowe AxonGuns (`axon:wybuchowy_<id>`)
+
+`gen_axonguns.py` (`WYBUCHOWE`) dopisuje definicje przedmiotów `assets/axon/items/wybuchowy_<id>.json` dla `wybuchowe.yml` z AxonGuns. Granat to `grenade`, granat zapalający `incendarygrenade`, mołotow `molotov`, granat dymny `smokegrenade`, flashbang `flashbang`, C4 `c4`, a mina `proxymine`. Do tego czcionka `axon:blysk` z jednym białym znakiem `\ue100` (64×16 px skalowane do wysokości 256). Flashbang wysyła go jako tytuł, więc ekran robi się biały i powoli gaśnie.
+
+Granatnik M79 (`gen.py: build_m79`, custom_model_data 92 na kuszy, poza jak w Remingtonie) to gruba lufa 40 mm z otworem, składany celownik, drewniane łoże i kolba z gumową stopką. Dopisuje go `dodaj_bronie_tanie.py` razem z tanimi broniami.
 
 ## Beczki i skrzynie: nowy silnik
 

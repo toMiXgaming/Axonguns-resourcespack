@@ -320,6 +320,27 @@ def _model(z, ref):
     return json.loads(z.read('assets/%s/models/%s.json' % (ns, p)))
 
 
+# Materiały wybuchowe AxonGuns (wybuchowe.yml): item_model axon:wybuchowy_<id> -> modele qualityarmory:misc/*
+WYBUCHOWE = {'granat': 'grenade', 'granat_zapalajacy': 'incendarygrenade', 'molotow': 'molotov',
+             'granat_dymny': 'smokegrenade', 'flashbang': 'flashbang', 'c4': 'c4', 'mina': 'proxymine'}
+
+
+def wybuchowe():
+    out = {'assets/axon/items/wybuchowy_%s.json' % i: (json.dumps(
+        {'model': {'type': 'minecraft:model', 'model': 'qualityarmory:misc/' + m}}, indent=1) + '\n').encode()
+        for i, m in WYBUCHOWE.items()}
+    # błysk flashbanga: biały znak \ue100 czcionki axon:blysk na cały ekran (tytuł, AxonGuns Explosives.flash)
+    import io
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new('RGBA', (64, 16), (255, 255, 255, 255)).save(buf, 'PNG')
+    out['assets/axon/textures/font/blysk.png'] = buf.getvalue()
+    out['assets/axon/font/blysk.json'] = (json.dumps({'providers': [
+        {'type': 'bitmap', 'file': 'axon:font/blysk.png', 'ascent': 128, 'height': 256, 'chars': ['\ue100']}]},
+        indent=1) + '\n').encode()
+    return out
+
+
 def pliki(z):
     names = set(z.namelist())
     guns = bronie(z)
@@ -350,6 +371,7 @@ def pliki(z):
                 out[PREFIX + '%s_bez/%s.json' % (wariant, name)] = (json.dumps(child, indent=1) + '\n').encode()
     out.update(dod)
     out.update(celowniki.pliki())
+    out.update(wybuchowe())
     out[ITEM] = (json.dumps(definicja(guns, dostepne), indent=1) + '\n').encode()
     # menu akcesoriów (AxonGuns + okno AxonItems): środek, długość i kotwice miejsc każdej broni
     modele = {}
