@@ -73,7 +73,7 @@ void axonSetLim(int i, vec2 v) {
 #define AXON_ROWS 3
 // Kursor: o ile stopni trzeba obrócić głowę, żeby przejechać całą szerokość / wysokość mapy.
 // Plugin ustawia graczowi yaw 0 i pitch 0 przy otwarciu mapy (OverlayLayout.CURSOR_*).
-const vec2 AXON_ITEMS_CURSOR_RANGE = vec2(60.0, 36.0);
+const vec2 AXON_ITEMS_CURSOR_RANGE = vec2(90.0, 54.0);
 const vec2 AXON_PLOT_CURSOR_RANGE = vec2(180.0, 120.0);
 
 vec2 axonCursorAt(vec2 range) {
