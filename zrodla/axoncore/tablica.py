@@ -470,6 +470,9 @@ def pliki():
         files[FONT_DIR + name + '.png'] = _png(imgs[name])
         providers.append({'type': 'bitmap', 'file': FONT_REF + name + '.png', 'height': height,
                           'ascent': ascent, 'chars': [chr(cp)]})
+    from . import zdrowie   # sylwetka i ikonki systemu zdrowia (U+EE00–U+EE15), ten sam default.json
+    files.update(zdrowie.pliki())
+    providers += zdrowie.providers()
     from . import rangi   # plakietki rang przy nicku (U+EC00–U+EC1F), ten sam default.json
     files.update(rangi.pliki())
     providers += rangi.providers()

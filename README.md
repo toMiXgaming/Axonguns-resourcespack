@@ -563,6 +563,26 @@ Dziesiąty model to ładunek `c4` (trzy kostki w oliwkowej folii, taśma, zegar 
 
 Granatnik M79 (`gen.py: build_m79`, custom_model_data 92 na kuszy, poza jak w Remingtonie) to gruba lufa 40 mm z otworem, składany celownik, drewniane łoże i kolba z gumową stopką. Dopisuje go `dodaj_bronie_tanie.py` razem z tanimi broniami.
 
+## System zdrowia: przedmioty medyczne i sylwetka gracza
+
+Przedmioty medyczne Axon-items (`zrodla/gen_medyczne.py`, silnik z `gen_narzedzia.py`): `axon:bandage` (bandaż),
+`axon:tourniquet` (opaska uciskowa), `axon:first_aid_kit` (apteczka mała), `axon:military_medkit` (apteczka
+wojskowa), `axon:splint` (szyna), `axon:painkillers` (środki przeciwbólowe), `axon:surgical_kit` (zestaw
+chirurgiczny). Modele 3D `axon:block/<nazwa>` z teksturą `axon:item/med_<nazwa>` 256×256, wyśrodkowane w kratce,
+ze wspólnym układem w ręce, na ziemi i w ekwipunku. Podgląd: `podglady/zdrowie-przedmioty.png`.
+
+Sylwetka gracza do panelu HUD AxonScoreboard i okna „Zdrowie” (`zrodla/axoncore/zdrowie.py`): obrys U+EE00
+i 7 części U+EE01–U+EE07 (głowa, klatka, brzuch, lewa ręka, prawa ręka, lewa noga, prawa noga), w kształcie gracza z Minecrafta
+(16 × 32 px, gładka bez skina, plus 1 px obrysu, znak 18 × 34 px GUI, tekstura 72 × 136),
+biała do barwienia kolorem tekstu; ikonki stanów 8 × 8 U+EE10–U+EE15 (krwawienie,
+mocne krwawienie, złamanie, ból, szyna, środki przeciwbólowe). Są w `minecraft:default` i w czcionce panelu
+`axon:hud`; w tej drugiej na końcu listy znaków, więc numery znaków, które zna starszy AxonScoreboard, się nie
+zmieniają (AxonScoreboard 1.8 ma je w `hud_znaki.txt`). Podgląd: `podglady/zdrowie-sylwetka.png`.
+
+Dopisanie do gotowych zipów: `python3 zrodla/gen_medyczne.py && python3 zrodla/dodaj_zdrowie.py` (pisze też
+od nowa `default.json` i `hud.json` z generatora tablicy). Pełna przebudowa: `gen_axoncore.pliki()` bierze
+przedmioty z `build/`.
+
 ## Beczki i skrzynie: nowy silnik
 
 `zrodla/gen_pojemniki.py` (silnik z `gen_narzedzia.py`) zastępuje beczki i skrzynie z `axoncore/barrels.py` i `crates.py`. Beczki są teraz okrągłe (stopniowany okrąg z pasów, żebra, kołnierze, wieko z korkami), a rozbite mają poszarpany brzeg, łup i wieko obok. Skrzynie to drewniana, narzędziowa, szafka medyczna, karton z puszkami, wojskowa i elitarna, każda z własną teksturą 256×256 (`axon:item/poj_<nazwa>`). Beczka i otwarta beczka z Minecrafta używają tych samych modeli (tekstury w `axon:block/vanilla/poj_*`). Uruchomienie: `python3 zrodla/gen_pojemniki.py`, potem `python3 zrodla/podmien_pojemniki.py` (podmienia trzy zipy i sprawdza paczkę). `gen_axoncore.py` dopisuje te pliki do swojego wyniku. Drewno w narzędziach ma teraz poprawnie ułożone włókna (wzdłuż osi elementu). Podglądy: `podglady/axoncore-beczki.png`, `podglady/axoncore-skrzynie.png`.
