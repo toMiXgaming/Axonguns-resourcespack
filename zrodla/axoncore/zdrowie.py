@@ -15,7 +15,8 @@ końcu listy znaków, żeby nie przesuwać numerów, które zna już AxonScorebo
 | U+EE10–U+EE15 | ikonki 8×8: krwawienie, mocne krwawienie, złamanie, ból, szyna, środki przeciwbólowe |
 
 Sylwetka stoi przodem do patrzącego, więc lewa ręka i lewa noga gracza są po prawej stronie obrazka
-(tak jak w Tarkovie). Wysokość znaku to SYL_H px GUI, szerokość SYL_W (advance SYL_W + 1)."""
+(tak jak w Tarkovie). Postać ma proporcje gracza z Minecrafta (16 × 32 piksele skina, 1 px GUI na piksel),
+z 1 px obrysu dookoła: znak ma SYL_W × SYL_H px GUI (advance SYL_W + 1)."""
 import io
 
 from PIL import Image, ImageDraw, ImageFilter
@@ -23,8 +24,8 @@ from PIL import Image, ImageDraw, ImageFilter
 FONT_DIR = 'assets/axon/textures/font/zdrowie/'
 FONT_REF = 'axon:font/zdrowie/'
 
-SYL_W, SYL_H = 16, 36          # px GUI
-SYL_SS = 4                     # gęstość tekstury (64×144), ostra w każdej skali GUI i w oknie powiększonym ×4
+SYL_W, SYL_H = 18, 34          # px GUI: postać 16 × 32 jak gracz z Minecrafta plus 1 px obrysu dookoła
+SYL_SS = 4                     # tekstura 72×136: piksel skina = 4×4 teksele, ostry w HUD i w oknie powiększonym
 SYL_ASCENT = 7                 # góra sylwetki równo z górą tekstu w linii
 
 CZESCI = ['glowa', 'klatka', 'brzuch', 'reka_lewa', 'reka_prawa', 'noga_lewa', 'noga_prawa']
@@ -39,72 +40,102 @@ IKONA_H, IKONA_ASCENT = 8, 7
 KOLORY = [(0.75, (110, 220, 120)), (0.5, (232, 214, 80)), (0.25, (240, 150, 60)), (0.0001, (226, 64, 52)),
           (0.0, (40, 40, 44))]
 
-# Kształty w siatce 16 × 36 (px GUI). Szczeliny ok. 0,6 px między częściami, żeby kolory się nie zlewały.
-def _ksztalty(d, u, czesc):
-    def R(x0, y0, x1, y1, r):
-        d.rounded_rectangle([x0 * u, y0 * u, x1 * u, y1 * u], radius=r * u, fill=255)
+# Postać jak gracz z Minecrafta widziany z przodu, w pikselach skina (x0, y0, x1, y1), siatka 16 × 32.
+# Prawa ręka i noga gracza są po lewej stronie obrazka (postać stoi przodem). Klatka i brzuch to górna
+# i dolna część tułowia (brzuch od linii paska w dół).
+PROSTOKATY = {
+    'glowa': (4, 0, 12, 8),
+    'klatka': (4, 8, 12, 15),
+    'brzuch': (4, 15, 12, 20),
+    'reka_prawa': (0, 8, 4, 20),
+    'reka_lewa': (12, 8, 16, 20),
+    'noga_prawa': (4, 20, 8, 32),
+    'noga_lewa': (8, 20, 12, 32),
+}
 
-    def poly(*pts):
-        d.polygon([(x * u, y * u) for x, y in pts], fill=255)
 
+def _odcienie(czesc):
+    """Jasność każdego piksela skina części (0–255, biały do barwienia): ciemniejszy brzeg, światło z lewej
+    i z góry, lekki szum jak w skinach oraz twarz, pasek i szwy."""
+    import random
+    import zlib
+    rnd = random.Random(zlib.crc32(czesc.encode()))
+    x0, y0, x1, y1 = PROSTOKATY[czesc]
+    px = {}
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            v = 232 - 30 * (y - y0) / max(1, y1 - y0 - 1) + rnd.randint(-9, 9)
+            if x == x0 or y == y0:
+                v += 14                                    # światło z lewej i z góry
+            if x == x1 - 1 or y == y1 - 1:
+                v -= 46                                    # cień na prawym i dolnym brzegu
+            px[x, y] = v
     if czesc == 'glowa':
-        d.ellipse([5.3 * u, 0.3 * u, 10.7 * u, 6.6 * u], fill=255)
+        for x in range(4, 12):                             # włosy (dwa górne rzędy) ciemniejsze
+            px[x, 0] -= 50
+            px[x, 1] -= 50
+        px[4, 2] -= 50; px[11, 2] -= 50
+        px[5, 4], px[10, 4] = 255, 255                     # białka oczu
+        px[6, 4], px[9, 4] = 70, 70                        # źrenice
+        px[7, 5] -= 30; px[8, 5] -= 30                     # nos
+        for x in (6, 7, 8, 9):
+            px[x, 6] -= 45                                 # usta
     elif czesc == 'klatka':
-        poly((4.4, 8.2), (5.6, 7.4), (10.4, 7.4), (11.6, 8.2), (11.2, 14.4), (4.8, 14.4))
-        R(4.4, 7.4, 11.6, 10.0, 1.2)
+        px[7, 8] -= 35; px[8, 8] -= 35                     # dekolt
+        px[7, 9] -= 25; px[8, 9] -= 25
     elif czesc == 'brzuch':
-        R(4.9, 15.0, 11.1, 19.6, 1.0)
-    elif czesc in ('reka_prawa', 'reka_lewa'):
-        # ręka prawa gracza = lewa strona obrazka
-        poly((1.0, 18.8), (2.6, 8.4), (3.9, 7.9), (3.9, 13.0), (2.9, 19.2))
-        R(0.6, 18.4, 3.0, 21.4, 1.1)          # dłoń
-    elif czesc in ('noga_prawa', 'noga_lewa'):
-        poly((4.9, 20.2), (7.7, 20.2), (7.5, 34.0), (5.4, 34.0), (5.0, 27.0))
-        R(4.6, 33.4, 7.7, 35.6, 0.8)          # stopa
+        for x in range(4, 12):
+            px[x, 15] -= 55                                # pasek
+        px[7, 15] += 60; px[8, 15] += 60                   # klamra
+    elif czesc.startswith('reka'):
+        for x in range(x0, x1):
+            px[x, 18] += 12                                # dłoń jaśniejsza
+            px[x, 19] += 12
+            px[x, 17] -= 20                                # rękaw
+    elif czesc.startswith('noga'):
+        for x in range(x0, x1):
+            px[x, 30] -= 40                                # buty
+            px[x, 31] -= 40
+    return {k: max(40, min(255, int(v))) for k, v in px.items()}
 
 
-def _czesc_img(czesc):
-    W, H = SYL_W * SYL_SS * 4, SYL_H * SYL_SS * 4        # rysowane 4× gęściej, potem zmniejszane
-    m = Image.new('L', (W, H))
-    d = ImageDraw.Draw(m)
-    u = SYL_SS * 4
-    lustro = czesc in ('reka_lewa', 'noga_lewa')
-    _ksztalty(d, u, czesc)
-    if lustro:
-        m = m.transpose(Image.FLIP_LEFT_RIGHT)
-    return m
-
-
-def _gotowe(mask, cien=False):
-    small = mask.resize((SYL_W * SYL_SS, SYL_H * SYL_SS), Image.LANCZOS)
-    out = Image.new('RGBA', small.size)
-    po, pm = out.load(), small.load()
-    for y in range(small.height):
-        for x in range(small.width):
-            a = pm[x, y]
-            if a:
-                if cien:
-                    po[x, y] = (10, 12, 16, min(255, int(a * 0.85)))
-                else:
-                    # lekki gradient z góry na dół i jaśniejsza lewa krawędź: sylwetka nie jest płaską plamą
-                    shade = int(255 - 50 * y / small.height)
-                    po[x, y] = (shade, shade, shade, a)
-    # stała szerokość: ostatnia kolumna niepusta (advance = SYL_W + 1 dla każdego znaku)
-    a = out.getpixel((out.width - 1, out.height - 1))
-    out.putpixel((out.width - 1, out.height - 1), (a[0], a[1], a[2], max(a[3], 1)))
+def _czesc(czesc):
+    S = SYL_SS
+    out = Image.new('RGBA', (SYL_W * S, SYL_H * S))
+    d = ImageDraw.Draw(out)
+    for (x, y), v in _odcienie(czesc).items():
+        X, Y = (x + 1) * S, (y + 1) * S                    # +1: margines na obrys
+        d.rectangle([X, Y, X + S - 1, Y + S - 1], fill=(v, v, v, 255))
+    # cienki szew (1 teksel) dookoła części: ręce nie zlewają się z tułowiem przy tym samym kolorze
+    x0, y0, x1, y1 = PROSTOKATY[czesc]
+    px = out.load()
+    for X in range((x0 + 1) * S, (x1 + 1) * S):
+        for Y in range((y0 + 1) * S, (y1 + 1) * S):
+            if X in ((x0 + 1) * S, (x1 + 1) * S - 1) or Y in ((y0 + 1) * S, (y1 + 1) * S - 1):
+                r, g, b, a = px[X, Y]
+                px[X, Y] = (r * 3 // 5, g * 3 // 5, b * 3 // 5, a)
     return out
+
+
+def _stala_szerokosc(img):
+    """Ostatnia kolumna niepusta: advance = SYL_W + 1 dla każdego znaku sylwetki."""
+    a = img.getpixel((img.width - 1, img.height - 1))
+    img.putpixel((img.width - 1, img.height - 1), (a[0], a[1], a[2], max(a[3], 1)))
+    return img
 
 
 def sylwetka():
     """Nazwa -> obrazek RGBA: 'obrys' i 7 części."""
-    masks = {c: _czesc_img(c) for c in CZESCI}
-    out = {c: _gotowe(m) for c, m in masks.items()}
-    full = Image.new('L', masks['glowa'].size)
-    for m in masks.values():
-        full = Image.composite(Image.new('L', full.size, 255), full, m)
-    obrys = full.filter(ImageFilter.MaxFilter(4 * 4 + 1))  # ok. 1 px GUI wokół całej sylwetki
-    out['obrys'] = _gotowe(obrys, cien=True)
-    return out
+    out = {c: _czesc(c) for c in CZESCI}
+    S = SYL_SS
+    full = Image.new('L', (SYL_W, SYL_H))
+    for x0, y0, x1, y1 in PROSTOKATY.values():
+        ImageDraw.Draw(full).rectangle([x0 + 1, y0 + 1, x1, y1], fill=255)
+    obrys = full.filter(ImageFilter.MaxFilter(3)).resize((SYL_W * S, SYL_H * S), Image.NEAREST)
+    cien = Image.new('RGBA', obrys.size)
+    cien.putalpha(obrys.point(lambda v: 230 if v else 0))
+    out['obrys'] = cien
+    return {k: _stala_szerokosc(v) for k, v in out.items()}
 
 
 # ---------------------------------------------------------------- ikonki stanów 8×8 (rysowane w 128×128)
@@ -217,4 +248,4 @@ def podglad(stany=None, skala=4, tlo=(24, 27, 36)):
         tint = Image.merge('RGBA', [r.point(lambda v, k=kol[0]: v * k // 255), gg.point(lambda v, k=kol[1]: v * k // 255),
                                     b.point(lambda v, k=kol[2]: v * k // 255), a])
         out.alpha_composite(tint)
-    return out.resize((W * skala // SYL_SS, H * skala // SYL_SS), Image.LANCZOS)
+    return out.resize((W * skala // SYL_SS, H * skala // SYL_SS), Image.NEAREST)

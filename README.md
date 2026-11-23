@@ -572,8 +572,9 @@ chirurgiczny). Modele 3D `axon:block/<nazwa>` z teksturą `axon:item/med_<nazwa>
 ze wspólnym układem w ręce, na ziemi i w ekwipunku. Podgląd: `podglady/zdrowie-przedmioty.png`.
 
 Sylwetka gracza do panelu HUD AxonScoreboard i okna „Zdrowie” (`zrodla/axoncore/zdrowie.py`): obrys U+EE00
-i 7 części U+EE01–U+EE07 (głowa, klatka, brzuch, lewa ręka, prawa ręka, lewa noga, prawa noga), każda biała
-16 × 36 px GUI (tekstura 64 × 144), barwiona kolorem tekstu; ikonki stanów 8 × 8 U+EE10–U+EE15 (krwawienie,
+i 7 części U+EE01–U+EE07 (głowa, klatka, brzuch, lewa ręka, prawa ręka, lewa noga, prawa noga), w kształcie gracza z Minecrafta
+(16 × 32 piksele skina z twarzą, paskiem i butami, plus 1 px obrysu, znak 18 × 34 px GUI, tekstura 72 × 136),
+biała do barwienia kolorem tekstu; ikonki stanów 8 × 8 U+EE10–U+EE15 (krwawienie,
 mocne krwawienie, złamanie, ból, szyna, środki przeciwbólowe). Są w `minecraft:default` i w czcionce panelu
 `axon:hud`; w tej drugiej na końcu listy znaków, więc numery znaków, które zna starszy AxonScoreboard, się nie
 zmieniają (AxonScoreboard 1.8 ma je w `hud_znaki.txt`). Podgląd: `podglady/zdrowie-sylwetka.png`.
