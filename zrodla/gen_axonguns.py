@@ -219,11 +219,17 @@ def _dispatch(guns, wariant, dostepne=None):
         name = ref.split('/')[-1]
         model = _bron(wariant, name)
         dod = gen_dodatki.nakladki(name, wariant, dostepne or {})
-        if cel:
-            # kropka kolimatora i pierścień holo na środku ekranu, broń widać dalej
-            empty = {'type': 'minecraft:empty'}
-            dod = dod + [_flaga(r, {'type': 'minecraft:model', 'model': celowniki.ref(r, wariant)}, empty)
-                         for r in ('kolimator', 'holo')]
+        if cel and gen_dodatki.PRZESUNIECIE.get(name.split('_')[0]):
+            # kolimator/holo: model 3D celownika na broni, cała broń przesunięta (kropka na środku ekranu)
+            ow = gen_dodatki.OPT_WARIANTY[wariant]
+            opt = _bron(ow, name)
+            dod_opt = gen_dodatki.nakladki(name, ow, dostepne or {})
+            if dod_opt:
+                opt = {'type': 'minecraft:composite', 'models': [opt] + dod_opt}
+            if dod:
+                model = {'type': 'minecraft:composite', 'models': [model] + dod}
+            model = _flaga('kolimator', opt, _flaga('holo', opt, model))
+            dod = []
         if dod:
             model = {'type': 'minecraft:composite', 'models': [model] + dod}
         if cel:
@@ -318,10 +324,17 @@ def pliki(z):
     names = set(z.namelist())
     guns = bronie(z)
     out = {}
+    gen_dodatki.PRZESUNIECIE.clear()
+    dod, dostepne = gen_dodatki.pliki(z, warianty, guns)
     for cmd, ref in guns:
         name = ref.split('/')[-1]
         display = _display(z, ref, names)
         w = warianty(display, name)
+        delta = gen_dodatki.PRZESUNIECIE.get(name.split('_')[0])
+        if delta:
+            # celowanie przez kolimator/holo: broń przesunięta, kropka na środku ekranu
+            w.update({gen_dodatki.OPT_WARIANTY[v]: gen_dodatki._z_przesunieciem(w[v], delta[v])
+                      for v in gen_dodatki.OPT_WARIANTY})
         for wariant, disp in w.items():
             model = {'parent': ref, 'display': disp}
             out[PREFIX + '%s/%s.json' % (wariant, name)] = (json.dumps(model, indent=1) + '\n').encode()
@@ -335,7 +348,6 @@ def pliki(z):
             for wariant, disp in w.items():
                 child = {'parent': 'axon:bron/_bez/%s' % name, 'display': disp}
                 out[PREFIX + '%s_bez/%s.json' % (wariant, name)] = (json.dumps(child, indent=1) + '\n').encode()
-    dod, dostepne = gen_dodatki.pliki(z, warianty, guns)
     out.update(dod)
     out.update(celowniki.pliki())
     out[ITEM] = (json.dumps(definicja(guns, dostepne), indent=1) + '\n').encode()

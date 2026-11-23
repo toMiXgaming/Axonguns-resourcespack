@@ -67,7 +67,8 @@ Dodatki na broni (`zrodla/gen_dodatki.py`) włącza flaga `custom_model_data` od
 
 Przy celowaniu (`zrodla/celowniki.py`) celowniki nie są już modelem na broni, tylko płaską nakładką tuż przed okiem, zawsze na środku ekranu:
 - luneta (flaga lunety, a w AWP i Dragunovie zawsze): jedna płaska karta 2:1 z teksturą 1536×768 rysowaną w `zrodla/okular.py` (gruby gumowy okular z bliska z cieniem, korpus lunety z nitami, bez pokręteł, okno ze szkłem przyciemnionym przy brzegu, odblask, siatka mil-dot z grubymi ramionami i czerwonym punktem). Poza rysunkiem tekstura jest przezroczysta, więc dookoła widać świat; broni wtedy nie widać. Zastępuje dawną rurę AWP, przez którą było widać tylko mały kwadrat,
-- kolimator: okrągła obudowa (jak Aimpoint) z lekko przyciemnioną szybką i czerwoną kropką, holo: prostokątna rama z daszkiem (jak EOTech), szybka, czerwony pierścień z kropką; broń pod spodem widać dalej.
+- kolimator i holo: bez nakładki. Przy celowaniu widać ich klockowy model 3D na broni (te same materiały i styl co broń, szerokość nie większa niż broń w tym miejscu, najwyżej 0,5). Model do celowania jest ściśnięty w pionie, bo display broni rozciąga go w widoku, a cała broń jest przesunięta tak, żeby kropka wypadła na środku ekranu (warianty `cel_opt` i `cel_u_opt`). Kropka obu celowników jest na tej samej wysokości nad podstawą (`OPT_V`), holo ma dodatkowo pierścień wokół kropki.
+- krzyżyk przy celowaniu: shader GUI `position_tex_color` (zrodla/shadery i shadery_1_21_11) nie rysuje krzyżyka, gdy reszta `GameTime` × 24000 jest w oknie 13000–13140 (`AXON_AIM_TIME`). To okno ustawia AxonGuns (`AimHudSignal`) celującemu graczowi; hotbar zostaje.
 
 Z założonym celownikiem (kolimator, holo, luneta) broń ma wariant bez muszki i szczerbinki (`axon:bron/<wariant>_bez/<broń>`, elementy `fs_*`, `fsb_*`, `rs_*`, `buis_*` bez podstaw), więc nie widać dwóch celowników naraz.
 

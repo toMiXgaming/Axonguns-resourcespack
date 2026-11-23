@@ -36,6 +36,16 @@ flat out int axonHide;
 #define AXON_HUD_TIME 12000.0
 #define AXON_HUD_WINDOW 140.0
 
+// AxonGuns: przy celowaniu plugin ustawia wiek świata z resztą z 24000 w [AXON_AIM_TIME, + AXON_AIM_WINDOW)
+// (AimHudSignal). Wtedy GUI chowa tylko celownik (krzyżyk) na środku ekranu.
+#define AXON_AIM_TIME 13000.0
+#define AXON_AIM_WINDOW 140.0
+
+bool axonAiming(float gameTime) {
+    float t = gameTime * 24000.0;
+    return t >= AXON_AIM_TIME && t < AXON_AIM_TIME + AXON_AIM_WINDOW;
+}
+
 bool axonMapOpen(float gameTime) {
     float t = gameTime * 24000.0;
     return t >= AXON_HUD_TIME && t < AXON_HUD_TIME + AXON_HUD_WINDOW;
@@ -77,5 +87,9 @@ void main() {
         if (cornerX && cornerY) {
             gl_Position = vec4(-10.0, -10.0, -10.0, 1.0);
         }
+    }
+    if (ProjMat[2][3] == 0.0 && axonHide == 0 && axonAiming(GameTime)) {
+        axonGui = axonGuiPos(gl_Position, ProjMat);
+        axonHide = 2;
     }
 }

@@ -53,6 +53,13 @@ void main() {
     if (axonHide == 1 && axonInHud(axonGui, axonGuiSize(ProjMat), 70.0)) {
         discard;
     }
+    // AxonGuns: celowanie chowa tylko celownik i wskaźnik ataku pod nim
+    if (axonHide == 2) {
+        vec2 c = axonGuiSize(ProjMat) * 0.5;
+        if (abs(axonGui.x - c.x) <= 10.0 && axonGui.y >= c.y - 10.0 && axonGui.y <= c.y + 22.0) {
+            discard;
+        }
+    }
     vec4 color = texture(Sampler0, texCoord0) * vertexColor;
     if (color.a == 0.0) {
         discard;
