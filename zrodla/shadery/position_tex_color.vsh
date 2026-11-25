@@ -1,5 +1,8 @@
 #version 150
 
+// Ta sama pozycja co w innych shaderach, bit w bit (inaczej napis z daleka przeplata się z deską tabliczki).
+invariant gl_Position;
+
 in vec3 Position;
 in vec2 UV0;
 in vec4 Color;

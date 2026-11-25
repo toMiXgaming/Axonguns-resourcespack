@@ -85,6 +85,10 @@ Jedna paczka działa na wszystkich wersjach 1.21.x. `pack.mcmeta` deklaruje form
 | `axon_shadery_1_21_0/` | 1.21–1.21.1 | Te same shadery w zapisie sprzed 1.21.2 (nazwy bez `minecraft:`). |
 | `axon_shadery_1_21_11/` | 1.21.11 (format 75) | Te same shadery w formacie 1.21.11 (z `zrodla/shadery_1_21_11/`). Bez tego warsztat, skrzynie i mapa na 1.21.11 wiszą jako zwykłe mapy w ramkach dookoła gracza zamiast pełnego ekranu. |
 
+**Sodium:** nakładka `axon_shadery_1_21_11` ma `terrain.vsh` (zamrożony świat przy otwartym oknie, `axon_freeze.glsl`). Sodium rysuje bloki własnym shaderem, więc ten plik u niego nic nie robi, a AxonItems (`ClientView.canFreeze`) i tak nie zamraża świata klientom z modami. Żeby Sodium nie pokazywał czerwonego komunikatu „incompatible with Sodium”, `pack.mcmeta` ma `"sodium": {"ignored_shaders": ["terrain.vsh"]}`. Nie dodawaj innych shaderów terenu (`rendertype_solid/cutout/translucent/tripwire`, `terrain.fsh`) ani `fog.glsl`/`light.glsl`, bo Sodium znowu zgłosi paczkę.
+
+**`invariant gl_Position`:** każdy nasz `.vsh` ma `invariant gl_Position;`. Duży `rendertype_text.vsh` sterownik kompiluje inaczej niż `entity.vsh`, więc pozycja litery na tabliczce i deski różniła się o ułamek i z daleka napisy (tabliczki, dymki NPC) przeplatały się z deską i były rozmyte (potwierdzone u gracza z Sodium/Iris na 1.21.11). Nowy `.vsh` też musi mieć tę linię.
+
 Od 1.21.6 shadery mają inny format. Na 1.21.11 dodaje je nakładka `axon_shadery_1_21_11`, na 1.21.6–1.21.10 paczka nie ma shaderów (pełny ekran tam nie działa). Na 1.21–1.21.1 nie ma komponentu `item_model`, więc rekwizyty AXON-Structure (zrzut, meble, auta) wyświetlają się tylko od 1.21.2; bronie, skiny i reaktor działają wszędzie.
 
 Paczka była wczytana w prawdziwym kliencie 1.21.1, 1.21.3, 1.21.5 i 1.21.11 (bez błędów modeli i shaderów; na 1.21.1 i 1.21.3 sprawdzone, że nakładka z `overrides` się wczytuje). `QualityArmory-21-axon-1.21.11.zip` to teraz kopia tej samej paczki, zostawiona, żeby stare linki działały.
