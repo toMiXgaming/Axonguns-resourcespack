@@ -1,5 +1,8 @@
 #version 330
 
+// Ta sama pozycja co w innych shaderach, bit w bit (inaczej napis z daleka przeplata się z deską tabliczki).
+invariant gl_Position;
+
 // Nie ma moj_import: ten shader jest używany przy starcie, gdy paczki zasobów jeszcze nie istnieją.
 layout(std140) uniform DynamicTransforms {
     mat4 ModelViewMat;

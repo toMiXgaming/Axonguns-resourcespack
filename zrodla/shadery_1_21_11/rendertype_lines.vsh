@@ -1,5 +1,8 @@
 #version 330
 
+// Ta sama pozycja co w innych shaderach, bit w bit (inaczej napis z daleka przeplata się z deską tabliczki).
+invariant gl_Position;
+
 #moj_import <minecraft:fog.glsl>
 #moj_import <minecraft:globals.glsl>
 #moj_import <minecraft:dynamictransforms.glsl>
