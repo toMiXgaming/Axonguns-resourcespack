@@ -6,6 +6,7 @@
     "max_format": 75,
     "description": "AXON: 18 broni AXON ze skinami premium na bazie QualityGuns 2.1.9. Minecraft 1.21-1.21.11"
   },
+  "sodium": {"ignored_shaders": ["terrain.vsh"]},
   "overlays": {
     "entries": [
       {"formats": [34, 45], "min_format": 34, "max_format": 45, "directory": "axon_1_21_0"},

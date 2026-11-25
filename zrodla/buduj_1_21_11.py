@@ -29,7 +29,10 @@ def main():
             if info.filename.startswith('assets/minecraft/shaders/') or info.filename == 'pack.mcmeta':
                 continue
             dst.writestr(info, src.read(info.filename))
-        mcmeta = {'pack': {'min_format': 75, 'max_format': 75, 'description': DESCRIPTION}}
+        mcmeta = {'pack': {'min_format': 75, 'max_format': 75, 'description': DESCRIPTION},
+                  # Sodium rysuje bloki sam; terrain.vsh (zamrożony świat) działa tylko w czystym kliencie,
+                  # a AxonItems nie zamraża świata klientom z modami. Bez tego Sodium pokazuje czerwony komunikat.
+                  'sodium': {'ignored_shaders': ['terrain.vsh']}}
         dst.writestr('pack.mcmeta', json.dumps(mcmeta, indent=2, ensure_ascii=False) + '\n')
         for name in sorted(os.listdir(SHADERS)):
             # *.glsl to wspólne kawałki (#moj_import <minecraft:...>), reszta to shadery core
